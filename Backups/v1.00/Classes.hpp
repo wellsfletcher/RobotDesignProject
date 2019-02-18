@@ -1,5 +1,3 @@
-#define IS_SIMULATION 0
-#if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
  
  
@@ -26,16 +24,12 @@
 #include "GFWUtility.hpp"
 
 #include <cstdlib>                      // standard definitions
-#include <iostream>                     // C++ I/O
-#include <cstdio>                       // C I/O (for sprintf)
 
 
 
 
 
 
-#endif
-#if !IS_SIMULATION // if this is not the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
  
  
@@ -54,15 +48,13 @@
 /*
 #include <FEHLCD.h>
 #include <FEHUtility.h>
- 
-#include <string.h>
 */
 
 
 
 
 
-#endif
+
 /*
  
  
@@ -80,6 +72,8 @@
 
 // include statements
 
+#include <iostream>                     // C++ I/O
+#include <cstdio>                       // C I/O (for sprintf)
 #include <cmath>                        // standard definitions
 using namespace std;                    // make std accessible
 
@@ -679,8 +673,8 @@ public:
     bool pressStartedWithinBound;
     int BUTT_MARGIN;
     // these may need to be moved / initialized elswhere in order to work on the proteus
-    static const int dec = 5; // amount pixels to shrink the button by when its pressed
-    static const int TEXT_HEIGHT = 10;
+    constexpr static float dec = 5; // amount pixels to shrink the button by when its pressed
+    constexpr static int TEXT_HEIGHT = 10;
     
     // updates the text of the button
     void UpdateText (char txt[]) {

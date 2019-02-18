@@ -1,5 +1,3 @@
-#define IS_SIMULATION 0 // also have to define this variable in Simulation.hpp and Classes.hpp
-#if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
  
  
@@ -15,159 +13,14 @@
 
 
 
-// #include "GFWLCD.hpp"
-// #include "GFWUtility.hpp" // now lives in "Class.hpp"
-#include "GFWFunctions.hpp"
-#include "GFWMotor.hpp" // #include "Simulation.hpp" // includes Classes.hpp // includes GFWLCD.hpp // #include "GFWUtility.hpp"
-// #include "Classes.hpp"
-
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
-#include <OpenGL/glext.h>
-
-#ifdef __APPLE_CC__
-#include <GLUT/glut.h>
-#else
-#include <GL/glut.h>
-#endif
-
-#include <math.h>
-#include <vector>
-using namespace std;
-
-#include <cstdlib>                      // standard definitions
-#include <iostream>                     // C++ I/O
-#include <cstdio>                       // C I/O (for sprintf)
-#include <cmath>                        // standard definitions
-
-
-
-// #define ZOOM_SCALE 3 // now lives in GFWLCD.hpp
-void Init ();
-void mainLoop ();
-void DrawEverything ();
-bool leftKeyInp;
-bool upKeyInp;
-bool rightKeyInp;
-bool downKeyInp;
-
-#define CALLBACK_DELAY .0001 // in seconds
-#define UPDATE_INTERVAL 0.005
-// GLint TIMER_DELAY = CALLBACK_DELAY * 1000; // in milleseconds
-GLint TIMER_DELAY = 5; // in milleseconds
-
-void Reshape(int w, int h) {
-    glViewport (0, 0, w, h);                    // update the viewport
-    glMatrixMode(GL_PROJECTION);                // update projection
-    glLoadIdentity();
-    gluOrtho2D(0.0, 320, 0.0, 240);             // map unit square to viewport
-    glMatrixMode(GL_MODELVIEW);
-    // glutPostRedisplay ();                       // request redisplay
-}
-
-void Display (void) {                          // display callback
-    DrawEverything ();
-    glFlush();
-}
-
-void PassiveMouseV2 (int x, int y) {             // updates upon mouse movement when there are mouse clicks/inputs
-    if (LCD.touchState) {
-        LCD.touchX = x/ZOOM_SCALE;
-        LCD.touchY = y/ZOOM_SCALE;
-    }
-}
-
-void Mouse (int buttonState, int clickState, int x, int y) {      // mouse click callback ... only updates upon mouse click
-    if (clickState == GLUT_DOWN && buttonState == GLUT_LEFT_BUTTON) { // was (button == GLUT_LEFT_BUTTON)
-        LCD.touchState = true;
-        LCD.touchX = x/ZOOM_SCALE; // re-enable these statements if you delete the passive mouse function
-        LCD.touchY = y/ZOOM_SCALE;
-        // cout << "Touch Y: " << LCD.touchY;
-    } if ((buttonState == GLUT_LEFT_BUTTON ) && (clickState == GLUT_UP)) {
-        LCD.touchState = false;
-        LCD.touchX = -1;
-        LCD.touchY = -1;
-    }
-}
-
-// keyboard callback
-void Keyboard (unsigned char c, int x, int y) {
-    switch (c) {                                // c is the key that is hit
-        case 'a':
-            leftKeyInp = true;
-            break;
-        case 'w':
-            upKeyInp = true;
-            break;
-        case 'd':
-            rightKeyInp = true;
-            break;
-        case 's':
-            downKeyInp = true;
-            break;
-        case 27:                               // 'q' means quit
-            exit (0);
-            break;
-        default:
-            break;
-    }
-}
-
-void KeyboardUp (unsigned char c, int x, int y) {
-    switch (c) {                                // c is the key that is hit
-        case 'a':
-            leftKeyInp = false;
-            break;
-        case 'w':
-            upKeyInp = false;
-            break;
-        case 'd':
-            rightKeyInp = false;
-            break;
-        case 's':
-            downKeyInp = false;
-            break;
-        default:
-            break;
-    }
-}
-
-void Timer (int id) {
-    mainLoop ();
-    
-    glutTimerFunc(TIMER_DELAY, Timer, 0);
-}
-
-int main (int argc, char** argv) {
-    
-    glutInit(&argc, argv);                      // OpenGL initializations
-    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);// double buffering and RGB // was GLUT_DOUBLE
-    glutInitWindowSize(320*ZOOM_SCALE, 240*ZOOM_SCALE);               // create a 400x400 window
-    glutInitWindowPosition(0, 0);               // ...in the upper left
-    glutCreateWindow("Game");                  // create the window
-    
-    glutDisplayFunc(Display);                 // setup callbacks
-    glutReshapeFunc(Reshape);
-    glutMotionFunc(PassiveMouseV2);
-    glutMouseFunc(Mouse);
-    glutKeyboardFunc(Keyboard);
-    glutKeyboardUpFunc(KeyboardUp);
-    glutTimerFunc(TIMER_DELAY, Timer, 0);
-    
-    Init ();
-    
-    glutMainLoop ();                             // start it running
-    
-    return 0;                                   // ANSI C expects this
-}
+// {omitted}
 
 
 
 
 
 
-#endif
-#if !IS_SIMULATION // if this is not the simulation, then this chunck of code is used. Otherwise, this code is ignored.
+
 /*
  
  
@@ -182,41 +35,32 @@ int main (int argc, char** argv) {
 
 
 
-
  
 // include statements
  
 // #include <FEHLCD.h> // this statement lives in Classes.hpp
-// #include <FEHUtility.h> // this statement lives in Classes.hpp
 #include <FEHIO.h>
+// #include <FEHUtility.h> // this statement lives in Classes.hpp
 #include <FEHMotor.h>
 #include <FEHServo.h>
 #include "Simulation.hpp"
 
-
-// priority function declarations
-void Init ();
-void mainLoop ();
- 
 // code control variables
 float timeSinceLastCodeCall; // amount of time alotted since the mainLoop code was last called
 #define TIMER_DELAY 0.00 // delay before the mainLoop is called; 0 means that the mainloop code is called as soon as it is able to
-#define UPDATE_INTERVAL 0.5
 
 // Don't add anything to this main method. If you do, it will mess up the simulation code's behavior.
 // Only add stuff to the initialization method (Init) and the main looping method (mainLoop).
 // It shouldn't be necessary to add to the main method itself.
-int main (void) {
+int main () {
     // call the initilization method (is the first thing that gets called; only gets called once and is used for the purpose of initializing variables)
     Init ();
     
-    while (true) {
-        // call the mainLoop code only after a fixed time interval has passed; this is done to better mimic the similution code behavior
-        if (TimeNow () - timeSinceLastCodeCall > TIMER_DELAY) {
-            timeSinceLastCodeCall = TimeNow ();
-            
-            mainLoop ();
-        }
+    // call the mainLoop code only after a fixed time interval has passed; this is done to better mimic the similution code behavior
+    if (TimeNow () - timeSinceLastCodeCall > TIMER_DELAY) {
+        timeSinceLastCodeCall = TimeNow ();
+        
+        mainLoop ();
     }
     
     return 0;
@@ -227,7 +71,6 @@ int main (void) {
 
 
 
-#endif
 /*
  
  
@@ -488,7 +331,7 @@ private:
 
 /************************ SETTINGS VARIABLES ************************/
 
-// ...
+// #define IS_SIMULATION 0 // this variable now lives in the simulation.hpp file
 
 
 /************************ MISCELLANEOUS VARIABLES ************************/
@@ -496,9 +339,11 @@ private:
 Vector2 touch = Vector2 ();
 bool touchState = false;
 float timeSinceLastFrameUpdate;
+#define UPDATE_INTERVAL 0.005
 
 Course course;
 Vehicle vehicle;
+// Vehicle simulatedVehicle; // this variable now lives in the simulation files
 Simulation simulation;
 
 Vectors Vector;
