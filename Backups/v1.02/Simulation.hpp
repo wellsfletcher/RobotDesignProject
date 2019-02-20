@@ -1,4 +1,4 @@
-#define IS_SIMULATION 1
+#define IS_SIMULATION 0
 /*
  
  
@@ -156,7 +156,6 @@ public:
             netTorque = netTorque + torque;
             
             veh->wheels [k].lastForceApplied = wheelForce;
-            // veh->wheels [k].lastForceApplied = Vector2 (-wheelForce.x, -wheelForce.y); // account for the direction of the motors being wrong
         }
         
         // (temporary) skip calculations and hardcode stuff; both of the below quantities are reasonable and the stuff calculated above should generally be similar to them
@@ -170,14 +169,7 @@ public:
         angularAccel = angularAccel * RADS_TO_DEGREES * deltaTime * deltaTime; // rad/s/s --> degrees/frame/frame
         netAccel = Vector2 (netAccel.x * METERS_TO_INCHES * deltaTime * deltaTime, netAccel.y * METERS_TO_INCHES * deltaTime * deltaTime); // m/s/s to inches/frame/frame
         
-        // account for the direction of the motors being wrong
-        /*
-        angularAccel *= -1;
-        netAccel = Vector2 (-netAccel.x, -netAccel.y);
-        */
-        
         veh->lastForceApplied = netForce;
-        // veh->lastForceApplied = Vector2 (-netForce.x, -netForce.y); // account for the direction of the motors being wrong
         
         veh->ApplyAcceleration (netAccel);
         veh->ApplyAngularAcceleration (angularAccel);
@@ -232,7 +224,7 @@ public:
     constexpr static float STAT_FRICT_FORCE = NORMAL_FORCE * STAT_FRICT_COEF; // the force applied to the bottom of the wheel due to static friction
     constexpr static float WHEEL_TORQUE_FRICT = STAT_FRICT_FORCE * WHEEL_RADIUS; // the torque applied to each wheel due to friction
     
-    constexpr static float CURRENT = 3.6 * 0.5; // I don't know what this value actually is; 3.6 --> stall; 1.15 --> free
+    constexpr static float CURRENT = 3.6; // I don't know what this value actually is; 3.6 --> stall; 1.15 --> free
     constexpr static float VOLTS = 9.0;
     constexpr static float MAX_POWER = CURRENT * VOLTS; // I don't know what this value actually is
     constexpr static float WHEEL_ANGULAR_SPEED_AT_50_POWER = 5.0; // I don't know what this value actually is; measure this

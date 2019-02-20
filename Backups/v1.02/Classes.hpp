@@ -1,4 +1,4 @@
-#define IS_SIMULATION 1
+#define IS_SIMULATION 0
 #if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
  
@@ -190,65 +190,12 @@ public:
         left = Vector2 (-1, 0);
         up = Vector2 (0, 1);
         down = Vector2 (0, -1);
-        
-        const double sqrt3 = sqrt (3.0);
-        
-        B = Vector2 (-sqrt3, 1);
-        C = Vector2 (0, 1);
-        D = Vector2 (sqrt3, 1);
-        E = Vector2 (sqrt3, -1);
-        F = Vector2 (0, -1);
-        A = Vector2 (-sqrt3, -1);
-        
-        AB = getAverageUnitVector2 (A, B);
-        BC = getAverageUnitVector2 (B, C);
-        CD = getAverageUnitVector2 (C, D);
-        DE = getAverageUnitVector2 (D, E);
-        EF = getAverageUnitVector2 (E, F);
-        FA = getAverageUnitVector2 (F, A);
     }
     Vector2 right;
     Vector2 left;
     Vector2 up;
     Vector2 down;
-    
-    Vector2 A;
-    Vector2 B;
-    Vector2 C;
-    Vector2 D;
-    Vector2 E;
-    Vector2 F;
-    
-    Vector2 AB;
-    Vector2 BC;
-    Vector2 CD;
-    Vector2 DE;
-    Vector2 EF;
-    Vector2 FA;
-    
-    void AlignVehicleVectors (float degrees) {
-        float degreesForAlignment = degrees;
-        
-        A.Rotate (degreesForAlignment);
-        B.Rotate (degreesForAlignment);
-        C.Rotate (degreesForAlignment);
-        D.Rotate (degreesForAlignment);
-        E.Rotate (degreesForAlignment);
-        F.Rotate (degreesForAlignment);
-        
-        AB.Rotate (degreesForAlignment);
-        BC.Rotate (degreesForAlignment);
-        CD.Rotate (degreesForAlignment);
-        DE.Rotate (degreesForAlignment);
-        EF.Rotate (degreesForAlignment);
-        FA.Rotate (degreesForAlignment);
-    }
 private:
-    Vector2 getAverageUnitVector2 (Vector2 a, Vector2 b) {
-        Vector2 average = Vector2 (a.x + b.x, a.y + b.y);
-        average = average.getUnitVector ();
-        return average;
-    }
 };
 
 
@@ -469,67 +416,6 @@ public:
 
 // vehicle classes
 
-class BumpSwitch {
-public:
-    BumpSwitch (Vector2 position, Vector2 direction) {
-        pos = position;
-        dir = direction;
-        
-        CreateBumpSwitch ();
-    }
-    BumpSwitch (BumpSwitch *bump) {
-        pos = Vector2 (bump->pos.x, bump->pos.y);
-        dir = Vector2 (bump->dir.x, bump->dir.y);;
-        
-        CreateBumpSwitch ();
-    }
-    BumpSwitch () {
-        
-    }
-    Vector2 pos; // position relative to the vehicle
-    Vector2 dir; // the forward direction (normal) of the bump switch
-    Vector2 stdPos; // the bump's position in standard position (with no additional rotation applied)
-    Vector2 stdDir; // the bump's direction in standard position (with no additional rotation applied)
-    
-    bool value;
-    
-    // these two methods will set the percent of the motors after the "UpdateMotors" function is called in main
-    bool Value () {
-        return value;
-    }
-    // don't use this
-    void SetValue (bool newValue) {
-        value = newValue;
-    }
-    void Rotate (float degrees) {
-        pos.Rotate (degrees);
-        dir.Rotate (degrees);
-    }
-    void SetRotation (Vector2 direction) {
-        dir = Vector2 (stdDir.x, stdDir.y);
-        pos = Vector2 (stdPos.x, stdPos.y);
-        
-        dir.Rotate (direction);
-        pos.Rotate (direction);
-    }
-    void SetRotation (float degrees) {
-        dir = Vector2 (stdDir.x, stdDir.y);
-        pos = Vector2 (stdPos.x, stdPos.y);
-        
-        dir.Rotate (degrees);
-        pos.Rotate (degrees);
-    }
-private:
-    void CreateBumpSwitch () {
-        dir = dir.getUnitVector ();
-        
-        stdPos = Vector2 (pos.x, pos.y);
-        stdDir = Vector2 (dir.x, dir.y);
-        
-        value = true;
-    }
-};
-
 
 class Wheel {
 public:
@@ -622,7 +508,7 @@ private:
 
 class Vehicle {
 public:
-    Vehicle (Vector2 position, Vector2 direction, Vector2 centerOfMass, Polygon chss, Wheel whls[], int whlsLngth, BumpSwitch bmps[], int bmpsLngth, float rds) {
+    Vehicle (Vector2 position, Vector2 direction, Vector2 centerOfMass, Polygon chss, Wheel whls[], int whlsLngth, float rds) {
         pos = position;
         dir = direction.getUnitVector();
         wheelsLength = whlsLngth;
@@ -634,12 +520,6 @@ public:
         stdChassis = Polygon (chss);
         CM = centerOfMass; // center of mass should usually be Vector2 (0, 0) by default
         radius = rds;
-        
-        bumpsLength = bmpsLngth;
-        // copy the bumps array
-        for (int k = 0; k < bumpsLength; k++) {
-            bumps [k] = BumpSwitch (bmps [k]);
-        }
     }
     Vehicle (Vehicle *veh) {
         pos = Vector2 (veh->pos.x, veh->pos.y);
@@ -654,12 +534,6 @@ public:
         stdChassis = Polygon (veh->stdChassis);
         CM = Vector2 (veh->CM.x, veh->CM.y);
         radius = veh->radius;
-        
-        bumpsLength = veh->bumpsLength;
-        // copy the bumps array
-        for (int k = 0; k < bumpsLength; k++) {
-            bumps [k] = BumpSwitch (veh->bumps [k]);
-        }
     }
     Vehicle () {
         
@@ -668,7 +542,6 @@ public:
     Vector2 pos; // the position of the vehicle
     Vector2 dir; // the forward direction of the vehicle
     int wheelsLength;
-    int bumpsLength;
     Vector2 CM; // center of mass
     float radius;
     Vector2 lastForceApplied; // for reference and drawing
@@ -685,34 +558,6 @@ public:
     
     /*********************** navigation / movement functions *************************/
     
-    // turns counterclockwise; make sure the motor percent doesn't exceed 100; the vehicle's linear speed remains constant
-    void Turn (float motorPercent) {
-        float w0 = wheels [0].activePercent + motorPercent;
-        float w1 = wheels [1].activePercent + motorPercent;
-        float w2 = wheels [2].activePercent + motorPercent;
-        
-        wheels [0].SetPercent (w0);
-        wheels [1].SetPercent (w1);
-        wheels [2].SetPercent (w2);
-    }
-    // turns counterclockwise; the vehicle's linear speed does not remain constant, but the net motor output remains constant (I haven't finished implementing this method correctly yet)
-    void TurnNeutral (float motorPercent) {
-        float w0 = wheels [0].activePercent;
-        float w1 = wheels [1].activePercent;
-        float w2 = wheels [2].activePercent;
-        
-        w0 *= 1 - motorPercent/100.0;
-        w1 *= 1 - motorPercent/100.0;
-        w2 *= 1 - motorPercent/100.0;
-        
-        w0 += motorPercent;
-        w1 += motorPercent;
-        w2 += motorPercent;
-        
-        wheels [0].SetPercent (w0);
-        wheels [1].SetPercent (w1);
-        wheels [2].SetPercent (w2);
-    }
     void Move (Vector2 motorPercent2) {
         float sqrt3 = sqrt (3.0);
         float w0 = -0.5 * motorPercent2.x  -  (sqrt3/2.0) * motorPercent2.y;
@@ -770,9 +615,6 @@ public:
         for (int k = 0; k < wheelsLength; k++) {
             wheels [k].Rotate (degrees);
         }
-        for (int k = 0; k < bumpsLength; k++) {
-            bumps [k].Rotate (degrees);
-        }
     }
     void SetRotation (Vector2 direction) {
         dir = direction;
@@ -782,9 +624,6 @@ public:
         for (int k = 0; k < wheelsLength; k++) {
             wheels [k].SetRotation (direction);
         }
-        for (int k = 0; k < bumpsLength; k++) {
-            bumps [k].SetRotation (direction);
-        }
     }
     void SetRotation (float degrees) {
         dir = dir.DegreesToVector2 (degrees); // theta = arctan (y / 1) --> tan (theta) = y / 1
@@ -793,9 +632,6 @@ public:
         
         for (int k = 0; k < wheelsLength; k++) {
             wheels [k].SetRotation (degrees);
-        }
-        for (int k = 0; k < bumpsLength; k++) {
-            bumps [k].SetRotation (degrees);
         }
     }
     void SetPosition (Vector2 position) {
@@ -807,7 +643,6 @@ public:
     Polygon stdChassis; // the vehicle's chassis shape in standard position (with no rotation applied)
     Polygon chassis;
     Wheel wheels [8]; // flexible array has to go at the bottom for whatever reason
-    BumpSwitch bumps [6];
 };
 
 

@@ -1,4 +1,4 @@
-#define IS_SIMULATION 1 // also have to define this variable in Simulation.hpp and Classes.hpp
+#define IS_SIMULATION 0 // also have to define this variable in Simulation.hpp and Classes.hpp
 #if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
  
@@ -19,7 +19,6 @@
 // #include "GFWUtility.hpp" // now lives in "Class.hpp"
 #include "GFWFunctions.hpp"
 #include "GFWMotor.hpp" // #include "Simulation.hpp" // includes Classes.hpp // includes GFWLCD.hpp // #include "GFWUtility.hpp"
-#include "GFWIO.hpp"
 // #include "Classes.hpp"
 
 #include <OpenGL/gl.h>
@@ -265,39 +264,12 @@ void DrawBox (Box box);
 void DrawEdge (Edge edge);
 void DrawCircle (Circle circle);
 void UpdateMotors ();
-void UpdateBumps ();
-void UpdateHardwareInput ();
-void UpdateHardwareOutput ();
-void PrintMotorPercents ();
-
-// bump identifiers
-/*
- #define F1 0
- #define B0 1
- #define B1 2
- #define D0 3
- #define D1 4
- #define F0 5
- */
-#define F1 2
-#define B0 3
-#define B1 4
-#define D0 5
-#define D1 0
-#define F0 1
 
 /************************ HARDWARE VARIABLES ************************/
 
 FEHMotor motor0 (FEHMotor::Motor0, 9.0); // the left motor
 FEHMotor motor1 (FEHMotor::Motor1, 9.0); // the front motor
 FEHMotor motor2 (FEHMotor::Motor2, 9.0); // the right motor
-
-DigitalInputPin bump0 (FEHIO::P1_0);
-DigitalInputPin bump1 (FEHIO::P1_1);
-DigitalInputPin bump2 (FEHIO::P1_2);
-DigitalInputPin bump3 (FEHIO::P1_3);
-DigitalInputPin bump4 (FEHIO::P1_4);
-DigitalInputPin bump5 (FEHIO::P1_5);
 
 
 /************************************************************************ CLASS DECLERATIONS ************************************************************************/
@@ -478,27 +450,6 @@ public:
         }
         Polygon global = Polygon (points, 6);
         DrawRealCourseObject (global);
-        
-        // draw bump switches
-        for (int k = 0; k < vehicle.bumpsLength; k++) {
-            // make bump's point not relative to the vehicle by adding the vehicle's positition to each point
-            Vector2 local = vehicle.bumps [k].pos;
-            Vector2 global = Vector2 (local.x + vehicle.pos.x, local.y + vehicle.pos.y);
-            
-            float scalar = 5.0;
-            
-            if (!vehicle.bumps [k].Value ()) {
-                scalar *= 3.0;
-            }
-            
-            Vector2 scaledDir = Vector2 (vehicle.bumps [k].dir.x * scalar, vehicle.bumps [k].dir.y * scalar);
-            
-            if (k == 5) { // the last one
-                LCD.SetFontColor (BLUE);
-            }
-            
-            PlotVector (global, scaledDir);
-        }
     }
     // draws real vehicle vectors (wheel direction, vehicle movement direction)
     void DrawVehicleVectors (Vehicle vehicle) {
@@ -530,281 +481,6 @@ private:
 };
 
 
-class Navigator {
-public:
-    Navigator (Vehicle *vehicle) {
-        veh = vehicle;
-        timeSinceAction = TimeNow ();
-        state = 0;
-        
-        timeWhenRotationStarted = 0;
-        timeRequiredForRotation = 0;
-        rotationDidNotJustStart = false;
-    }
-    Navigator () {
-        
-    }
-    Vehicle *veh;
-    int state;
-    float timeSinceAction;
-    
-    float timeWhenRotationStarted;
-    float timeRequiredForRotation;
-    bool rotationDidNotJustStart;
-    
-    // turn a ceratin amount of degrees; must be called repeadetly from a loop; returns true once the turn is complete
-    bool TurnDegrees (float degrees, float motorPercent) {
-        float ANG_VELOCITY_AT_50_POWER = 30; // in degrees per second
-        if (rotationDidNotJustStart == false) {
-            veh->Turn (motorPercent);
-            float angVel = ANG_VELOCITY_AT_50_POWER * 2.0 * motorPercent / 100.0;
-            // timeRequiredForRotation = abs (degrees / angVel); // t = Ø / w; may remove abs in the future
-            timeRequiredForRotation = degrees / angVel;
-            timeWhenRotationStarted = TimeNow ();
-            rotationDidNotJustStart = true;
-            // cout << "delta t = " << timeRequiredForRotation << endl;
-        }
-        if (TimeNow () - timeWhenRotationStarted > timeRequiredForRotation) {
-            // cout << "elapsed t = " << TimeNow () - timeWhenRotationStarted << endl;
-            rotationDidNotJustStart = false;
-            veh->Turn (-motorPercent); // "remove" the turn from the motors
-            return true;
-        } else {
-            return false;
-        }
-    }
-    
-    // performs the series of actions required for performance test one; must be repeatedly called from a loop
-    void PerformanceTest1 () {
-        UpdateHardwareInput ();
-        float timeScale = 0.2; // for testing purposes
-        
-        float power = 50; // note: power was at -35 (or maybe -25) for that speed video I recorded
-        float stopTime = 1.0;
-        Vector2 direction;
-        
-        float duration0 = 3.0 * timeScale;
-        float duration1 = 10.0 * timeScale;
-        float duration2 = 10.0 * timeScale;
-        
-        switch (state) {
-            case 0: {
-                timeSinceAction = TimeNow ();
-            } break;
-            case 1: { // turn 45 degrees CW
-                // cout << Vector.D.getAngle() << endl;
-                if (TurnDegrees (-45, -power)) {
-                    state++;
-                    timeSinceAction = TimeNow ();
-                }
-            } break;
-            case 2: { // stop the vehicle
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > stopTime) {
-                    state++;
-                    timeSinceAction = TimeNow ();
-                }
-            } break;
-            case 3: { // move in DE direction (rightwards)
-                veh->Move (Vector.DE, power);
-                if (TimeNow() - timeSinceAction > duration0) {
-                    state++;
-                    timeSinceAction = TimeNow ();
-                }
-            } break;
-            case 4: { // move in DE direction (rightwards) but slower, and stop once the bump switch is pressed
-                veh->Move (Vector.DE, power / 2.0);
-                if (!veh->bumps [D1].Value()) {
-                    state++;
-                    timeSinceAction = TimeNow ();
-                }
-            } break;
-                /*
-            case 5: {
-                veh->Turn (power / 2.0);
-                if (!veh->bumps [D0].Value()) {
-                    state++;
-                    timeSinceAction = TimeNow ();
-                }
-            } break;
-            case 6: {
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > stopTime) {
-                    state++;
-                    timeSinceAction = TimeNow ();
-                }
-            } break;
-            case 7: {
-                veh->Move (Vector.F, power / 2.0);
-                if (veh->bumps [69].Value()) {
-                    state++;
-                    timeSinceAction = TimeNow ();
-                }
-            } break;
-                 */
-            case 5: {
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > stopTime) {
-                    state = 0;
-                    timeSinceAction = TimeNow ();
-                }
-            } break;
-            default: {
-                // ...
-            } break;
-        }
-        UpdateHardwareOutput ();
-    }
-    // performs vehicle test procedure in which the vehicle drives forward; must be repeatedly called from a loop
-    void ForwardTest () {
-        UpdateHardwareInput ();
-        
-        float power = -80; // note: power was at -35 (or maybe -25) for that speed video I recorded
-        float timeBetween = 10.0;
-        Vector2 direction;
-        
-        switch (state) {
-            case 0:
-                timeSinceAction = TimeNow ();
-                break;
-            case 1:
-                veh->Move (Vector.right, power);
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 2;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 2:
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 0;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            default:
-                break;
-        }
-        UpdateHardwareOutput ();
-    }
-    // performs vehicle test procedure in which the drives in a square and then a diagonal; must be repeatedly called from a loop
-    void SquareAndDiagonalTest () {
-        UpdateHardwareInput ();
-        
-        float power = 25; // note: power was at -35 (or maybe -25) for that speed video I recorded
-        float timeBetween = 0.5;
-        Vector2 direction;
-        
-        switch (state) {
-            case 0:
-                timeSinceAction = TimeNow ();
-                break;
-            case 1:
-                veh->Move (Vector.right, power);
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 2;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 2:
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 3;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 3:
-                veh->Move (Vector.up, power);
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 4;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 4:
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 5;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 5:
-                veh->Move (Vector.left, power);
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 6;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 6:
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 7;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 7:
-                veh->Move (Vector.down, power);
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 8;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 8:
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 9;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 9:
-                direction = Vector2 (-1, -1);
-                direction = direction.getUnitVector ();
-                veh->Move (direction, power);
-                if (TimeNow() - timeSinceAction > timeBetween * 1.05) {
-                    state = 10;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 10:
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 11;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 11:
-                direction = Vector2 (1, 1);
-                direction = direction.getUnitVector ();
-                veh->Move (direction, power);
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 12;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 12:
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 0;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            default:
-                break;
-        }
-        UpdateHardwareOutput ();
-    }
-    // resets the navigator object (resets state variables and that sort of thing)
-    void Reset () {
-        state = 0;
-        timeSinceAction = TimeNow ();
-    }
-    // starts the navigation procedure; does this by setting state = 1
-    void Start () {
-        state = 1;
-    }
-    Vectors Vector;
-private:
-};
-
-
 /************************************************ MISCELLANEOUS CLASSES ************************************************/
 /************************************************************************ FUNCTION DECLERATIONS ************************************************************************/
 /************************************************************************ GLOBAL VARIABLE DECLERATIONS ************************************************************************/
@@ -824,14 +500,14 @@ float timeSinceLastFrameUpdate;
 Course course;
 Vehicle vehicle;
 Simulation simulation;
-Navigator navigator;
 
 Vectors Vector;
 
 
 /************************ MISCELLANEOUS VARIABLES ************************/
 
-// define bump identifiers
+int state;
+float timeSinceAction;
 
 
 /************************ GUI VARIABLES ************************/
@@ -869,47 +545,30 @@ void Init () {
     // initialize the course object
     course = Course (Vector2 (150, -32), .25);
     
-    int reverse = -1;
     int wheelsLength = 3;
-    int bumpsLength = 6;
     float radius = 1.2;
     float depth = 1.6;
     float hexSide = 4.25;
     float lowerHexRadius = (2.0*sqrt3 + 1.5*sqrt3) / 2.0; // (2*3^.5 + 1.5*3^.5) / 2.0 = 6.06217782649 / 2.0 ~= 3
     Vector2 lowerDisp = Vector2 (0, 1.0); // displacement between the lower chassis and the upper chassis
-    Wheel leftWheel = Wheel ( Vector2(lowerDisp.x - lowerHexRadius, lowerDisp.y - lowerHexRadius), Vector2(1 * reverse,-sqrt3 * reverse), radius, depth );
-    Wheel frontWheel = Wheel ( Vector2(lowerDisp.x, lowerDisp.y + lowerHexRadius), Vector2(-1 * reverse, 0), radius, depth );
-    Wheel rightWheel = Wheel ( Vector2(lowerDisp.x + lowerHexRadius, lowerDisp.y - lowerHexRadius), Vector2(1 * reverse,sqrt3 * reverse), radius, depth );
+    Wheel leftWheel = Wheel ( Vector2(lowerDisp.x - lowerHexRadius, lowerDisp.y - lowerHexRadius), Vector2(1,-sqrt3), radius, depth );
+    Wheel frontWheel = Wheel ( Vector2(lowerDisp.x, lowerDisp.y + lowerHexRadius), Vector2(-1, 0), radius, depth );
+    Wheel rightWheel = Wheel ( Vector2(lowerDisp.x + lowerHexRadius, lowerDisp.y - lowerHexRadius), Vector2(1,sqrt3), radius, depth );
     
     Wheel wheels[] = {   leftWheel, frontWheel, rightWheel  }; // 2.75 from number friendly center
-    
-    BumpSwitch bump0 = BumpSwitch (Vector2 (-hexSide/2.0, -hexSide), Vector2 (0, -1.0));
-    BumpSwitch bump1 = BumpSwitch (Vector2 (-hexSide, 0), Vector2 (-sqrt3, 1));
-    BumpSwitch bump2 = BumpSwitch (Vector2 (-hexSide/2.0, hexSide), Vector2 (-sqrt3, 1));
-    BumpSwitch bump3 = BumpSwitch (Vector2 (hexSide/2.0, hexSide), Vector2 (sqrt3, 1));
-    BumpSwitch bump4 = BumpSwitch (Vector2 (hexSide, 0), Vector2 (sqrt3, 1));
-    BumpSwitch bump5 = BumpSwitch (Vector2 (hexSide/2.0, -hexSide), Vector2 (0, -1.0));
-    
-    BumpSwitch bumps[] = {   bump0, bump1, bump2, bump3, bump4, bump5   };
     
     Vector2 centerOfMass = Vector2 (0,0);
     Vector2 startPosition = Vector2 (9,-63);
     Vector2 startDirection = Vector2 (0,1);
     Vector2 chPoints[6] = {Vector2 (-hexSide/2.0, hexSide),  Vector2 (hexSide/2.0, hexSide),  Vector2 (hexSide, 0),  Vector2 (hexSide/2.0, -hexSide),  Vector2 (-hexSide/2.0, -hexSide),  Vector2 (-hexSide, 0)};
     Polygon chassis = Polygon (chPoints, 6);
-    vehicle = Vehicle (startPosition, startDirection, centerOfMass, chassis, wheels, wheelsLength, bumps, bumpsLength, lowerHexRadius);
-    vehicle.SetRotation (Vector2 (-1, -1)); // since the direction of the wheel are reversed, it means that — in effect – the front and back sides are flipped; now the side with no wheels is the front, which is good because that's the side we wanted to change to the front any way
-
+    vehicle = Vehicle (startPosition, startDirection, centerOfMass, chassis, wheels, wheelsLength, lowerHexRadius);
+    
     if (IS_SIMULATION) {
         simulatedVehicle = Vehicle (vehicle); // create a vehicle object that shows where the vehicle would by according to simulated values; this should exist in the Xcode simulation
         simulation = Simulation (&simulatedVehicle);
     }
-    navigator = Navigator (&vehicle);
-    // cout << "before: " << navigator.Vector.D.x << ", " << navigator.Vector.D.y << endl;
-    navigator.Vector.AlignVehicleVectors (60);
-    Vector.AlignVehicleVectors (60);
-    // cout << "after: " << navigator.Vector.D.x << ", " << navigator.Vector.D.y << endl;
-    
+        
     timeSinceLastFrameUpdate = TimeNow (); // initialize the time since the last screen/frame update
 }
 
@@ -956,11 +615,110 @@ void mainLoop () {
     }
     */
     if (butt.IsBeingPressed (touch)) { // checks if the button was pressed and updates the state of the button
-        // vehicle.AddRotation (5);
-        navigator.Start ();
+        vehicle.AddRotation (5);
+        state = 1;
     }
     
-    navigator.PerformanceTest1 ();
+    float power = 25;
+    float timeBetween = 0.5;
+    Vector2 direction;
+    
+    switch (state) {
+        case 0:
+            timeSinceAction = TimeNow ();
+            break;
+        case 1:
+            vehicle.Move (Vector.right, power);
+            if (TimeNow() - timeSinceAction > timeBetween) {
+                state = 2;
+                timeSinceAction = TimeNow ();
+            }
+            break;
+        case 2:
+            vehicle.Stop ();
+            if (TimeNow() - timeSinceAction > timeBetween) {
+                state = 3;
+                timeSinceAction = TimeNow ();
+            }
+            break;
+        case 3:
+            vehicle.Move (Vector.up, power);
+            if (TimeNow() - timeSinceAction > timeBetween) {
+                state = 4;
+                timeSinceAction = TimeNow ();
+            }
+            break;
+        case 4:
+            vehicle.Stop ();
+            if (TimeNow() - timeSinceAction > timeBetween) {
+                state = 5;
+                timeSinceAction = TimeNow ();
+            }
+            break;
+        case 5:
+            vehicle.Move (Vector.left, power);
+            if (TimeNow() - timeSinceAction > timeBetween) {
+                state = 6;
+                timeSinceAction = TimeNow ();
+            }
+            break;
+        case 6:
+            vehicle.Stop ();
+            if (TimeNow() - timeSinceAction > timeBetween) {
+                state = 7;
+                timeSinceAction = TimeNow ();
+            }
+            break;
+        case 7:
+            vehicle.Move (Vector.down, power);
+            if (TimeNow() - timeSinceAction > timeBetween) {
+                state = 8;
+                timeSinceAction = TimeNow ();
+            }
+            break;
+        case 8:
+            vehicle.Stop ();
+            if (TimeNow() - timeSinceAction > timeBetween) {
+                state = 9;
+                timeSinceAction = TimeNow ();
+            }
+            break;
+        case 9:
+            direction = Vector2 (-1, -1);
+            direction = direction.getUnitVector ();
+            vehicle.Move (direction, power);
+            if (TimeNow() - timeSinceAction > timeBetween * 1.05) {
+                state = 10;
+                timeSinceAction = TimeNow ();
+            }
+            break;
+        case 10:
+            vehicle.Stop ();
+            if (TimeNow() - timeSinceAction > timeBetween) {
+                state = 11;
+                timeSinceAction = TimeNow ();
+            }
+            break;
+        case 11:
+            direction = Vector2 (1, 1);
+            direction = direction.getUnitVector ();
+            vehicle.Move (direction, power);
+            if (TimeNow() - timeSinceAction > timeBetween) {
+                state = 12;
+                timeSinceAction = TimeNow ();
+            }
+            break;
+        case 12:
+            vehicle.Stop ();
+            if (TimeNow() - timeSinceAction > timeBetween) {
+                state = 0;
+                timeSinceAction = TimeNow ();
+            }
+            break;
+        default:
+            break;
+    }
+    UpdateMotors ();
     
     
     // update the screen only after a fixed time interval has passed
@@ -1003,23 +761,4 @@ void UpdateMotors () {
     motor0.SetPercent (vehicle.wheels[0].activePercent);
     motor1.SetPercent (vehicle.wheels[1].activePercent);
     motor2.SetPercent (vehicle.wheels[2].activePercent);
-}
-void UpdateBumps () {
-    vehicle.bumps [0].value = bump0.Value ();
-    vehicle.bumps [1].value = bump1.Value ();
-    vehicle.bumps [2].value = bump2.Value ();
-    vehicle.bumps [3].value = bump3.Value ();
-    vehicle.bumps [4].value = bump4.Value ();
-    vehicle.bumps [5].value = bump5.Value ();
-}
-void UpdateHardwareInput () {
-    UpdateBumps ();
-}
-void UpdateHardwareOutput () {
-    UpdateMotors ();
-}
-void PrintMotorPercents () {
-    cout << "Motor 1: " << vehicle.wheels[0].activePercent << "%" << endl;
-    cout << "Motor 2: " << vehicle.wheels[1].activePercent << "%" << endl;
-    cout << "Motor 3: " << vehicle.wheels[2].activePercent << "%" << endl;
 }
