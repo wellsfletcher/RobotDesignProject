@@ -20,7 +20,6 @@
 #include "GFWFunctions.hpp"
 #include "GFWMotor.hpp" // #include "Simulation.hpp" // includes Classes.hpp // includes GFWLCD.hpp // #include "GFWUtility.hpp"
 #include "GFWIO.hpp"
-#include "GFWServo.hpp"
 // #include "Classes.hpp"
 
 #include <OpenGL/gl.h>
@@ -300,9 +299,6 @@ DigitalInputPin bump3 (FEHIO::P1_3);
 DigitalInputPin bump4 (FEHIO::P1_4);
 DigitalInputPin bump5 (FEHIO::P1_5);
 
-FEHServo servo0 (FEHServo::Servo0);
-AnalogInputPin cds0 (FEHIO::P0_0);
-
 
 /************************************************************************ CLASS DECLERATIONS ************************************************************************/
 
@@ -458,11 +454,6 @@ public:
             DrawRealCourseObject (startPoint);
         }
     }
-    // draws text in real coords
-    void DrawRealText (Vector2 point, const char *str) {
-        Vector2 newPoint = ToRealGlobalPosition (point);
-        LCD.WriteAt (str, newPoint.x - 7, -newPoint.y - 8);
-    }
     
     // draws a vehicle object within the course
     void DrawRealVehicle (Vehicle vehicle) {
@@ -506,23 +497,6 @@ public:
                 LCD.SetFontColor (BLUE);
             }
             
-            Vector2 endPoint = Vector2 (global.x + scaledDir.x, global.y + scaledDir.y);
-            
-            switch (k) {
-                case F0:
-                    DrawRealText (endPoint, "F");
-                    break;
-                case D0:
-                    DrawRealText (endPoint, "D");
-                    break;
-                case B0:
-                    DrawRealText (endPoint, "B");
-                    break;
-
-                default:
-                    break;
-            }
-            
             PlotVector (global, scaledDir);
         }
     }
@@ -562,7 +536,6 @@ public:
         veh = vehicle;
         timeSinceAction = TimeNow ();
         state = 0;
-        actionToPerform = 0;
         
         timeWhenRotationStarted = 0;
         timeRequiredForRotation = 0;
@@ -573,7 +546,6 @@ public:
     }
     Vehicle *veh;
     int state;
-    int actionToPerform;
     float timeSinceAction;
     
     float timeWhenRotationStarted;
@@ -602,216 +574,9 @@ public:
         }
     }
     
-    /************************ TASK FUNCTIONS ************************/
-    
-    void StopVehicle (float stopTime) {
-        veh->Stop ();
-        if (TimeNow() - timeSinceAction > stopTime) {
-            state++;
-            timeSinceAction = TimeNow ();
-        }
-    }
-    
-    void TurnCW (float degrees, float power) {
-        if (TurnDegrees (-degrees, -power)) {
-            state++;
-            timeSinceAction = TimeNow ();
-        }
-    }
-    
-    void TurnCCW (float degrees, float power) {
-        if (TurnDegrees (degrees, power)) {
-            state++;
-            timeSinceAction = TimeNow ();
-        }
-    }
-    
-    void TurnUntilBumpCW (int bumpID, float power, float maxDegrees) {
-        // veh->Turn (-power);
-        TestEndCondition (TurnDegrees (-maxDegrees, -power) || !veh->bumps [bumpID].Value());
-    }
-    
-    void TurnUntilBumpCCW (int bumpID, float power, float maxDegrees) {
-        // veh->Turn (-power);
-        TestEndCondition (TurnDegrees (maxDegrees, power) || !veh->bumps [bumpID].Value());
-    }
-    
-    void MoveDuration (Vector2 direction, float power, float duration) {
-        veh->Move (direction, power);
-        if (TimeNow() - timeSinceAction > duration) {
-            state++;
-            timeSinceAction = TimeNow ();
-        }
-    }
-    
-    void MoveBump (Vector2 direction, int bumpID, float power) {
-        veh->Move (direction, power / 2.0);
-        if (!veh->bumps [bumpID].Value()) {
-            state++;
-            timeSinceAction = TimeNow ();
-        }
-    }
-    
-    void SetServoAngle (float degrees, float waitTime) {
-        veh->servo.SetDegree (degrees);
-        TestEndCondition (TimeNow() - timeSinceAction > waitTime);
-    }
-    
-    void WaitForLight () {
-        TestEndCondition (veh->cds.isLight());
-    }
-    
-    void TestEndCondition (bool conditionIsTrue) {
-        // if condition is true, then increment the current state (in order to move onto the next action) and update the timeSinceAction
-        if (conditionIsTrue) {
-            state++;
-            timeSinceAction = TimeNow ();
-        }
-    }
-    
-    // task variable definitions
-    static const int DO_NOTHING = 0;
-    static const int STOP = 1;
-    static const int WAIT_FOR_START_LIGHT = 100;
-    
-    static const int TURN_45_CW = 2;
-    static const int MOVE_E_DURATION = 14;
-    
-    static const int MOVE_DE_DURATION = 3;
-    static const int MOVE_DE_BUMP_D0 = 4;
-    
-    static const int MOVE_FA_DURATION = 5;
-    static const int MOVE_FA_BUMP_F1 = 6;
-    
-    static const int TURN_CW_BUMP_F0 = 7;
-    static const int GRIND_UP_RAMP = 8;
-    
-    static const int MOVE_E_BUMP_D1 = 9;
-    static const int MOVE_AB_DURATION = 10;
-    static const int MOVE_C_BUMP_D0 = 11;
-    static const int TURN_CW_BUMP_B1 = 12;
-    static const int MOVE_F_DURATION = 13;
-    
-    static const int LOWER_SERVO = 50;
-    
-    static const int END = 999;
-    
-    // performs the series of actions required for performance test one; must be repeatedly called from a loop; is draft 2
-    void PerformanceTestOneD2 () {
+    // performs the series of actions required for performance test one; must be repeatedly called from a loop
+    void PerformanceTest1 () {
         UpdateHardwareInput ();
-        
-        int sequence [] = {WAIT_FOR_START_LIGHT, TURN_45_CW, MOVE_E_DURATION, MOVE_FA_DURATION, MOVE_FA_BUMP_F1, TURN_CW_BUMP_F0, STOP, GRIND_UP_RAMP, MOVE_E_BUMP_D1, MOVE_AB_DURATION, MOVE_C_BUMP_D0, TURN_CW_BUMP_B1, STOP, MOVE_F_DURATION, STOP, LOWER_SERVO, STOP, END}; // currently, the first and last items should always be DO_NOTHING and END
-        actionToPerform = sequence [state];
-        
-        float timeScale = 0.2; // for testing purposes
-        
-        float power = 50; // note: power was at -35 (or maybe -25) for that speed video I recorded
-        float stopTime = 1.0;
-        Vector2 direction;
-        
-        float duration5 = 1.0 * timeScale; // short duration at the beginning spent moving forward
-        float duration0 = 3.0 * timeScale; // time spent initially going right
-        float duration1 = 5.0 * timeScale; // time going at max power up the ramp
-        float duration2 = 0.5 * timeScale; // short duration after colliding with the wall
-        float duration3 = 0.5 * timeScale; // short duration spent backing up from lever
-        float duration4 = 2.5 * timeScale; // duration spent waiting for the servo to lower
-
-        
-        switch (actionToPerform) {
-            case DO_NOTHING: {
-                timeSinceAction = TimeNow ();
-            } break;
-                
-            case WAIT_FOR_START_LIGHT: {
-                WaitForLight ();
-                veh->SetPosition (  Vector2 (9,-63)  );
-            } break;
-                
-            case STOP: { // turn 45 degrees CW
-                StopVehicle (stopTime);
-            } break;
-               
-            case MOVE_E_DURATION: {
-                MoveDuration (Vector.E, power * 0.75, duration5);
-            } break;
-                
-            case TURN_45_CW: {
-                TurnCW (45, power);
-            } break;
-                
-            case MOVE_DE_DURATION: { // move in DE direction (rightwards)
-                MoveDuration (Vector.DE, power, duration0);
-            } break;
-                
-            case MOVE_DE_BUMP_D0: { // move in DE direction (rightwards) but slower, and stop once the bump switch is pressed
-                MoveBump (Vector.DE, F0, power / 4.0);
-            } break;
-                
-            case MOVE_FA_DURATION: { // move in DE direction (rightwards)
-                MoveDuration (Vector.FA, power, duration0);
-            } break;
-                
-            case MOVE_FA_BUMP_F1: { // move in DE direction (rightwards) but slower, and stop once the bump switch is pressed
-                MoveBump (Vector.FA, F1, power / 4.0);
-            } break;
-                
-            case TURN_CW_BUMP_F0: { // note that the vehicle does not necessarily stop
-                float degreeTurnLimit = 90;
-                TurnUntilBumpCW (F0, power, degreeTurnLimit);
-                veh->SetPosition (  Vector2 (32, -60)  );
-            } break;
-                
-            // go up the ramp
-            case GRIND_UP_RAMP: {
-                MoveDuration (Vector.E, power * 1.7, duration1);
-                // may also want to implement a thing here to make the vehicle stay flush against the wall
-            } break;
-                
-            case MOVE_E_BUMP_D1: { // move in DE direction (rightwards) but slower, and stop once the bump switch is pressed
-                MoveBump (Vector.E, D1, power / 2.0);
-                // may also want to implement a thing here to make the vehicle stay flush against the wall
-            } break;
-        
-            // move back from the wall
-            case MOVE_AB_DURATION: { // move back a little
-                MoveDuration (Vector.AB, power / 4.0, duration2);
-                veh->SetPosition (  Vector2 (32, -8)  );
-            } break;
-        
-            case MOVE_C_BUMP_D0: { // C0 == D0
-                MoveBump (Vector.C, D0, power / 1.5);
-            } break;
-        
-            // try to get flush with the lever
-            case TURN_CW_BUMP_B1: { // getting flush with the lever; note that the vehicle does not necessarily stop
-                float degreeTurnLimit = 45;
-                TurnUntilBumpCW (B1, power, degreeTurnLimit); // C1 = B1
-                veh->SetPosition (  Vector2 (12, -12)  );
-            } break;
-        
-            case MOVE_F_DURATION: { // short duration spent backing up from lever
-                MoveDuration (Vector.F, power / 4.0, duration3);
-            } break;
-        
-            // lower the servo
-            case LOWER_SERVO: {
-                SetServoAngle (0, duration4);
-            } break;
-        
-            case END: {
-                actionToPerform = 0;
-            } break;
-                
-            default: {
-                // ...
-            } break;
-        }
-        UpdateHardwareOutput ();
-    }
-    // performs the series of actions required for performance test one; must be repeatedly called from a loop; is draft 1
-    void PerformanceTestOneD1 () {
-        UpdateHardwareInput ();
-        
         float timeScale = 0.2; // for testing purposes
         
         float power = 50; // note: power was at -35 (or maybe -25) for that speed video I recorded
@@ -1075,9 +840,6 @@ Vectors Vector;
 #define BUTT_WIDTH 100
 #define BUTT_HEIGHT 30
 Button butt;
-Button cancelButt;
-Button actionButt0;
-Button actionButt1;
 
 
 /************************ Just some sample colors ************************/
@@ -1101,15 +863,8 @@ void Init () {
     
     // sample button declaration
     char charPtr [100];
-    strcpy (charPtr, "START");
+    strcpy (charPtr, "PRESS");
     butt = Button (  Box ( Vector2 (30, -60), BUTT_WIDTH, BUTT_HEIGHT ), charPtr, 0  );
-    
-    strcpy (charPtr, "RESET");
-    cancelButt = Button (  Box ( Vector2 (30, -105), BUTT_WIDTH, BUTT_HEIGHT ), charPtr, 0  );
-    
-    strcpy (charPtr, "ACT");
-    actionButt0 = Button (  Box ( Vector2 (30, -150), 45, BUTT_HEIGHT ), charPtr, 0  );
-    actionButt1 = Button (  Box ( Vector2 (85, -150), 45, BUTT_HEIGHT ), charPtr, 0  );
     
     // initialize the course object
     course = Course (Vector2 (150, -32), .25);
@@ -1137,32 +892,22 @@ void Init () {
     
     BumpSwitch bumps[] = {   bump0, bump1, bump2, bump3, bump4, bump5   };
     
-    float servoStartDegrees = 0;
-    int servoMin = 500;
-    int servoMax = 2500;
-    servo0.SetMin (servoMin);
-    servo0.SetMax (servoMax);
-    Servo servo = Servo (Vector2 (0, 0.5), Vector2 (0, 1.0), servoStartDegrees);
-    
-    CDS cds = CDS (Vector2 (0, 1.0), Vector2 (0, 1.0));
-    
     Vector2 centerOfMass = Vector2 (0,0);
     Vector2 startPosition = Vector2 (9,-63);
     Vector2 startDirection = Vector2 (0,1);
     Vector2 chPoints[6] = {Vector2 (-hexSide/2.0, hexSide),  Vector2 (hexSide/2.0, hexSide),  Vector2 (hexSide, 0),  Vector2 (hexSide/2.0, -hexSide),  Vector2 (-hexSide/2.0, -hexSide),  Vector2 (-hexSide, 0)};
     Polygon chassis = Polygon (chPoints, 6);
-    vehicle = Vehicle (startPosition, startDirection, centerOfMass, chassis, servo, cds, wheels, wheelsLength, bumps, bumpsLength, lowerHexRadius);
-    // vehicle.SetRotation (Vector2 (-1, -1)); // since the direction of the wheel are reversed, it means that — in effect – the front and back sides are flipped; now the side with no wheels is the front, which is good because that's the side we wanted to change to the front any way
-    vehicle.AddRotation (255); // 180-45+120
-    
+    vehicle = Vehicle (startPosition, startDirection, centerOfMass, chassis, wheels, wheelsLength, bumps, bumpsLength, lowerHexRadius);
+    vehicle.SetRotation (Vector2 (-1, -1)); // since the direction of the wheel are reversed, it means that — in effect – the front and back sides are flipped; now the side with no wheels is the front, which is good because that's the side we wanted to change to the front any way
+
     if (IS_SIMULATION) {
         simulatedVehicle = Vehicle (vehicle); // create a vehicle object that shows where the vehicle would by according to simulated values; this should exist in the Xcode simulation
         simulation = Simulation (&simulatedVehicle);
     }
     navigator = Navigator (&vehicle);
     // cout << "before: " << navigator.Vector.D.x << ", " << navigator.Vector.D.y << endl;
-    navigator.Vector.AlignVehicleVectors (75); // 60-120                   // ******* important this might need to be 60 instead of 75 *******
-    Vector.AlignVehicleVectors (75);
+    navigator.Vector.AlignVehicleVectors (60);
+    Vector.AlignVehicleVectors (60);
     // cout << "after: " << navigator.Vector.D.x << ", " << navigator.Vector.D.y << endl;
     
     timeSinceLastFrameUpdate = TimeNow (); // initialize the time since the last screen/frame update
@@ -1191,9 +936,6 @@ void DrawEverything () {
     
     // sample button drawing function implementation
     butt.DrawButton();
-    cancelButt.DrawButton();
-    actionButt0.DrawButton();
-    actionButt1.DrawButton();
 }
 
 
@@ -1208,22 +950,17 @@ void mainLoop () {
     
     // perform all game actions (i.e. check for inputs, calculate physics, etc.) except for updating the screen
     
-    if (actionButt0.WasPressed (touch, touchState)) { // checks if the button was pressed and updates the state of the button
-        vehicle.servo.SetDegree (0);
+    /*
+    if (butt.WasPressed (touch, touchState)) { // checks if the button was pressed and updates the state of the button
+        // do something
     }
-    if (actionButt1.WasPressed (touch, touchState)) { // checks if the button was pressed and updates the state of the button
-        vehicle.servo.SetDegree (180);
-    }
-    
-    if (cancelButt.WasPressed (touch, touchState)) { // checks if the button was pressed and updates the state of the button
-        navigator.Reset ();
-    }
+    */
     if (butt.IsBeingPressed (touch)) { // checks if the button was pressed and updates the state of the button
         // vehicle.AddRotation (5);
         navigator.Start ();
     }
     
-    navigator.PerformanceTestOneD2 ();
+    navigator.PerformanceTest1 ();
     
     
     // update the screen only after a fixed time interval has passed
@@ -1262,12 +999,6 @@ void DrawPolygon (Polygon poly) {
 }
 
 
-void UpdateCDS () {
-    vehicle.cds.value = cds0.Value ();
-}
-void UpdateServos () {
-    servo0.SetDegree (vehicle.servo.degrees);
-}
 void UpdateMotors () {
     motor0.SetPercent (vehicle.wheels[0].activePercent);
     motor1.SetPercent (vehicle.wheels[1].activePercent);
@@ -1282,17 +1013,13 @@ void UpdateBumps () {
     vehicle.bumps [5].value = bump5.Value ();
 }
 void UpdateHardwareInput () {
-    UpdateCDS ();
     UpdateBumps ();
 }
 void UpdateHardwareOutput () {
     UpdateMotors ();
-    UpdateServos ();
 }
 void PrintMotorPercents () {
-    /*
     cout << "Motor 1: " << vehicle.wheels[0].activePercent << "%" << endl;
     cout << "Motor 2: " << vehicle.wheels[1].activePercent << "%" << endl;
     cout << "Motor 3: " << vehicle.wheels[2].activePercent << "%" << endl;
-    */
 }

@@ -469,186 +469,6 @@ public:
 
 // vehicle classes
 
-class CDS {
-public:
-    CDS (Vector2 position, Vector2 direction) {
-        pos = position;
-        dir = direction;
-        
-        CreateCDS ();
-    }
-    CDS (CDS *cds) {
-        pos = Vector2 (cds->pos.x, cds->pos.y);
-        dir = Vector2 (cds->dir.x, cds->dir.y);;
-        
-        CreateCDS ();
-    }
-    CDS () {
-        
-    }
-    Vector2 pos; // position relative to the vehicle
-    Vector2 dir; // the forward direction (normal) of the bump switch
-    Vector2 stdPos; // the bump's position in standard position (with no additional rotation applied)
-    Vector2 stdDir; // the bump's direction in standard position (with no additional rotation applied)
-    
-    float value;
-    
-    // for use with red color filter
-    bool isBlueLight () {
-        float lowerBound = 1.6;
-        float upperBound = 2.5;
-        bool result = false;
-        
-        if (value >= lowerBound && value < upperBound) {
-            result = true;
-        }
-        
-        return result;
-    }
-    
-    // for use with red color filter
-    bool isRedLight () {
-        float lowerBound = 0;
-        float upperBound = 1.6;
-        bool result = false;
-        
-        if (value >= lowerBound && value < upperBound) {
-            result = true;
-        }
-        
-        return result;
-    }
-    
-    // for use with no color filter
-    bool isLight () {
-        float lowerBound = 0;
-        float upperBound = 1.5;
-        bool result = false;
-        
-        if (value >= lowerBound && value < upperBound) {
-            result = true;
-        }
-        
-        return result;
-    }
-    
-    float Value () {
-        return value;
-    }
-    // don't use this
-    void SetValue (float newValue) {
-        value = newValue;
-    }
-    void Rotate (float degrees) {
-        pos.Rotate (degrees);
-        dir.Rotate (degrees);
-    }
-    void SetRotation (Vector2 direction) {
-        dir = Vector2 (stdDir.x, stdDir.y);
-        pos = Vector2 (stdPos.x, stdPos.y);
-        
-        dir.Rotate (direction);
-        pos.Rotate (direction);
-    }
-    void SetRotation (float degrees) {
-        dir = Vector2 (stdDir.x, stdDir.y);
-        pos = Vector2 (stdPos.x, stdPos.y);
-        
-        dir.Rotate (degrees);
-        pos.Rotate (degrees);
-    }
-private:
-    void CreateCDS () {
-        dir = dir.getUnitVector ();
-        
-        stdPos = Vector2 (pos.x, pos.y);
-        stdDir = Vector2 (dir.x, dir.y);
-        
-        value = true;
-    }
-};
-
-
-class Servo {
-public:
-    Servo (Vector2 position, Vector2 direction, float startDegrees) {
-        pos = position;
-        dir = direction;
-        degrees = startDegrees;
-        
-        CreateServo ();
-    }
-    Servo (Servo *serv) {
-        pos = Vector2 (serv->pos.x, serv->pos.y);
-        dir = Vector2 (serv->dir.x, serv->dir.y);
-        degrees = serv->degrees;
-        
-        CreateServo ();
-    }
-    Servo () {
-        
-    }
-    Vector2 pos; // position relative to the vehicle
-    Vector2 dir; // the forward direction (normal) of the bump switch
-    Vector2 stdPos; // the bump's position in standard position (with no additional rotation applied)
-    Vector2 stdDir; // the bump's direction in standard position (with no additional rotation applied)
-    
-    // bool minIsCalibrated; // eh this doesn't actually need to exist
-    // bool maxIsCalibrated;
-    float degrees;
-    int min;
-    int max;
-    bool off;
-    
-    void SetDegree (float dgrs) {
-        degrees = dgrs;
-    }
-    /*
-    void SetMin (int minValue) {
-        min = minValue;
-        // minIsCalibrated = true;
-    }
-    void SetMax (int maxValue) {
-        max = maxValue;
-        // maxIsCalibrated = true;
-    }
-    */
-    void Off () {
-        off = true;
-    }
-    
-    void Rotate (float degrees) {
-        pos.Rotate (degrees);
-        dir.Rotate (degrees);
-    }
-    void SetRotation (Vector2 direction) {
-        dir = Vector2 (stdDir.x, stdDir.y);
-        pos = Vector2 (stdPos.x, stdPos.y);
-        
-        dir.Rotate (direction);
-        pos.Rotate (direction);
-    }
-    void SetRotation (float degrees) {
-        dir = Vector2 (stdDir.x, stdDir.y);
-        pos = Vector2 (stdPos.x, stdPos.y);
-        
-        dir.Rotate (degrees);
-        pos.Rotate (degrees);
-    }
-private:
-    void CreateServo () {
-        dir = dir.getUnitVector ();
-        
-        stdPos = Vector2 (pos.x, pos.y);
-        stdDir = Vector2 (dir.x, dir.y);
-        
-        min = 500;
-        max = 2500;
-        off = false;
-    }
-};
-
-
 class BumpSwitch {
 public:
     BumpSwitch (Vector2 position, Vector2 direction) {
@@ -673,7 +493,7 @@ public:
     
     bool value;
     
-    // these two methods will set the value of the bumps after the "UpdateBumps" function is called in main
+    // these two methods will set the percent of the motors after the "UpdateMotors" function is called in main
     bool Value () {
         return value;
     }
@@ -802,15 +622,11 @@ private:
 
 class Vehicle {
 public:
-    Vehicle (Vector2 position, Vector2 direction, Vector2 centerOfMass, Polygon chss, Servo servoMotor, CDS cdsCell, Wheel whls[], int whlsLngth, BumpSwitch bmps[], int bmpsLngth, float rds) {
+    Vehicle (Vector2 position, Vector2 direction, Vector2 centerOfMass, Polygon chss, Wheel whls[], int whlsLngth, BumpSwitch bmps[], int bmpsLngth, float rds) {
         pos = position;
         dir = direction.getUnitVector();
-        // copy CDS cell object
-        cds = CDS (cdsCell);
-        // copy servo object
-        servo = Servo (servoMotor);
-        // copy the wheels array
         wheelsLength = whlsLngth;
+        // copy the wheels array
         for (int k = 0; k < wheelsLength; k++) {
             wheels [k] = Wheel (whls [k]);
         }
@@ -828,12 +644,8 @@ public:
     Vehicle (Vehicle *veh) {
         pos = Vector2 (veh->pos.x, veh->pos.y);
         dir = Vector2 (veh->dir.x, veh->dir.y);
-        // copy CDS cell object
-        cds = CDS (veh->cds);
-        // copy servo object
-        servo = Servo (veh->servo);
-        // copy the wheels array
         wheelsLength = veh->wheelsLength;
+        // copy the wheels array
         for (int k = 0; k < wheelsLength; k++) {
             // wheels [k] = whls [k];
             wheels [k] = Wheel (veh->wheels [k]);
@@ -994,8 +806,6 @@ private:
 public:
     Polygon stdChassis; // the vehicle's chassis shape in standard position (with no rotation applied)
     Polygon chassis;
-    Servo servo;
-    CDS cds;
     Wheel wheels [8]; // flexible array has to go at the bottom for whatever reason
     BumpSwitch bumps [6];
 };
