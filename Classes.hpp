@@ -1,13 +1,13 @@
-#define IS_SIMULATION 1
+#define IS_SIMULATION 0
 #if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
- 
- 
- 
+
+
+
  SIMULATION only stuff
- 
- 
- 
+
+
+
  */
 
 
@@ -37,13 +37,13 @@
 #endif
 #if !IS_SIMULATION // if this is not the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
- 
- 
- 
+
+
+
  NON-simulation only stuff
- 
- 
- 
+
+
+
  */
 
 
@@ -51,12 +51,12 @@
 
 
 
-/*
+
 #include <FEHLCD.h>
 #include <FEHUtility.h>
- 
+
 #include <string.h>
-*/
+
 
 
 
@@ -64,13 +64,13 @@
 
 #endif
 /*
- 
- 
- 
+
+
+
  SHARED simulation & non-simulation stuff
- 
- 
- 
+
+
+
  */
 
 
@@ -86,6 +86,7 @@ using namespace std;                    // make std accessible
 
 // universal classes
 
+#define M_PI 3.141592653589
 const double DEGREES_TO_RADS = M_PI / 180;
 
 class Vector2 {
@@ -100,7 +101,7 @@ public:
     }
     float x;
     float y;
-    
+
     // returns the magnitude of the vector
     float getMagnitude () {
         return sqrt (  pow (x, 2.0)  +  pow (y, 2.0)  );
@@ -163,7 +164,7 @@ public:
     }
     int x;
     int y;
-    
+
     // rotates vector counter-clockwise 90 degrees
     void RotateLeft () {
         int tempX = x;
@@ -190,52 +191,52 @@ public:
         left = Vector2 (-1, 0);
         up = Vector2 (0, 1);
         down = Vector2 (0, -1);
-        
+
         const double sqrt3 = sqrt (3.0);
-        
-        B = Vector2 (-sqrt3, 1);
+
+        Bb = Vector2 (-sqrt3, 1);
         C = Vector2 (0, 1);
         D = Vector2 (sqrt3, 1);
         E = Vector2 (sqrt3, -1);
         F = Vector2 (0, -1);
-        A = Vector2 (-sqrt3, -1);
-        
-        AB = getAverageUnitVector2 (A, B);
-        BC = getAverageUnitVector2 (B, C);
+        Aa = Vector2 (-sqrt3, -1);
+
+        AB = getAverageUnitVector2 (Aa, Bb);
+        BC = getAverageUnitVector2 (Bb, C);
         CD = getAverageUnitVector2 (C, D);
         DE = getAverageUnitVector2 (D, E);
         EF = getAverageUnitVector2 (E, F);
-        FA = getAverageUnitVector2 (F, A);
+        FA = getAverageUnitVector2 (F, Aa);
     }
     Vector2 right;
     Vector2 left;
     Vector2 up;
     Vector2 down;
-    
-    Vector2 A;
-    Vector2 B;
+
+    Vector2 Aa;
+    Vector2 Bb;
     Vector2 C;
     Vector2 D;
     Vector2 E;
     Vector2 F;
-    
+
     Vector2 AB;
     Vector2 BC;
     Vector2 CD;
     Vector2 DE;
     Vector2 EF;
     Vector2 FA;
-    
+
     void AlignVehicleVectors (float degrees) {
         float degreesForAlignment = degrees;
-        
-        A.Rotate (degreesForAlignment);
-        B.Rotate (degreesForAlignment);
+
+        Aa.Rotate (degreesForAlignment);
+        Bb.Rotate (degreesForAlignment);
         C.Rotate (degreesForAlignment);
         D.Rotate (degreesForAlignment);
         E.Rotate (degreesForAlignment);
         F.Rotate (degreesForAlignment);
-        
+
         AB.Rotate (degreesForAlignment);
         BC.Rotate (degreesForAlignment);
         CD.Rotate (degreesForAlignment);
@@ -256,9 +257,9 @@ private:
 class Shape {
 public:
     Shape () {
-        
+
     }
-    
+
     // virtual void CoolBeans () = 0;
     virtual void CoolBeans () {
         cout << "this from shape" << endl;
@@ -320,7 +321,7 @@ public:
         }
     }
     Edge () {
-        
+
     }
     Vector2 points[2];
     int dir;
@@ -350,12 +351,12 @@ public:
         points [3] = Vector2 (v0.x + width, v0.y - height); // points [3] = Vector2 (v0.x, v0.y - height);
     }
     Box () {
-        
+
     }
     Vector2 points[4];
     float width;
     float height;
-    
+
     void UpdatePosition (Vector2 pos) {
         points [0] = pos;
         Updatepoints ();
@@ -410,11 +411,11 @@ public:
         points [0] = v0;
     }
     Circle () {
-        
+
     }
     Vector2 points[1];
     float radius;
-    
+
     void UpdatePosition (Vector2 pos) {
         points [0] = pos;
     }
@@ -440,10 +441,10 @@ public:
         }
     }
     Polygon () {
-        
+
     }
     int length;
-    
+
     void Rotate (float degrees) {
         for (int k = 0; k < length; k++) {
             points [k].Rotate (degrees);
@@ -474,64 +475,64 @@ public:
     CDS (Vector2 position, Vector2 direction) {
         pos = position;
         dir = direction;
-        
+
         CreateCDS ();
     }
     CDS (CDS *cds) {
         pos = Vector2 (cds->pos.x, cds->pos.y);
         dir = Vector2 (cds->dir.x, cds->dir.y);;
-        
+
         CreateCDS ();
     }
     CDS () {
-        
+
     }
     Vector2 pos; // position relative to the vehicle
     Vector2 dir; // the forward direction (normal) of the bump switch
     Vector2 stdPos; // the bump's position in standard position (with no additional rotation applied)
     Vector2 stdDir; // the bump's direction in standard position (with no additional rotation applied)
-    
+
     float value;
-    
+
     // for use with red color filter
     bool isBlueLight () {
         float lowerBound = 1.6;
         float upperBound = 2.5;
         bool result = false;
-        
+
         if (value >= lowerBound && value < upperBound) {
             result = true;
         }
-        
+
         return result;
     }
-    
+
     // for use with red color filter
     bool isRedLight () {
         float lowerBound = 0;
         float upperBound = 1.6;
         bool result = false;
-        
+
         if (value >= lowerBound && value < upperBound) {
             result = true;
         }
-        
+
         return result;
     }
-    
+
     // for use with no color filter
     bool isLight () {
         float lowerBound = 0;
-        float upperBound = 1.5;
+        float upperBound = 1.0;
         bool result = false;
-        
+
         if (value >= lowerBound && value < upperBound) {
             result = true;
         }
-        
+
         return result;
     }
-    
+
     float Value () {
         return value;
     }
@@ -546,24 +547,24 @@ public:
     void SetRotation (Vector2 direction) {
         dir = Vector2 (stdDir.x, stdDir.y);
         pos = Vector2 (stdPos.x, stdPos.y);
-        
+
         dir.Rotate (direction);
         pos.Rotate (direction);
     }
     void SetRotation (float degrees) {
         dir = Vector2 (stdDir.x, stdDir.y);
         pos = Vector2 (stdPos.x, stdPos.y);
-        
+
         dir.Rotate (degrees);
         pos.Rotate (degrees);
     }
 private:
     void CreateCDS () {
         dir = dir.getUnitVector ();
-        
+
         stdPos = Vector2 (pos.x, pos.y);
         stdDir = Vector2 (dir.x, dir.y);
-        
+
         value = true;
     }
 };
@@ -575,31 +576,31 @@ public:
         pos = position;
         dir = direction;
         degrees = startDegrees;
-        
+
         CreateServo ();
     }
     Servo (Servo *serv) {
         pos = Vector2 (serv->pos.x, serv->pos.y);
         dir = Vector2 (serv->dir.x, serv->dir.y);
         degrees = serv->degrees;
-        
+
         CreateServo ();
     }
     Servo () {
-        
+
     }
     Vector2 pos; // position relative to the vehicle
     Vector2 dir; // the forward direction (normal) of the bump switch
     Vector2 stdPos; // the bump's position in standard position (with no additional rotation applied)
     Vector2 stdDir; // the bump's direction in standard position (with no additional rotation applied)
-    
+
     // bool minIsCalibrated; // eh this doesn't actually need to exist
     // bool maxIsCalibrated;
     float degrees;
     int min;
     int max;
     bool off;
-    
+
     void SetDegree (float dgrs) {
         degrees = dgrs;
     }
@@ -616,7 +617,7 @@ public:
     void Off () {
         off = true;
     }
-    
+
     void Rotate (float degrees) {
         pos.Rotate (degrees);
         dir.Rotate (degrees);
@@ -624,24 +625,24 @@ public:
     void SetRotation (Vector2 direction) {
         dir = Vector2 (stdDir.x, stdDir.y);
         pos = Vector2 (stdPos.x, stdPos.y);
-        
+
         dir.Rotate (direction);
         pos.Rotate (direction);
     }
     void SetRotation (float degrees) {
         dir = Vector2 (stdDir.x, stdDir.y);
         pos = Vector2 (stdPos.x, stdPos.y);
-        
+
         dir.Rotate (degrees);
         pos.Rotate (degrees);
     }
 private:
     void CreateServo () {
         dir = dir.getUnitVector ();
-        
+
         stdPos = Vector2 (pos.x, pos.y);
         stdDir = Vector2 (dir.x, dir.y);
-        
+
         min = 500;
         max = 2500;
         off = false;
@@ -654,25 +655,25 @@ public:
     BumpSwitch (Vector2 position, Vector2 direction) {
         pos = position;
         dir = direction;
-        
+
         CreateBumpSwitch ();
     }
     BumpSwitch (BumpSwitch *bump) {
         pos = Vector2 (bump->pos.x, bump->pos.y);
         dir = Vector2 (bump->dir.x, bump->dir.y);;
-        
+
         CreateBumpSwitch ();
     }
     BumpSwitch () {
-        
+
     }
     Vector2 pos; // position relative to the vehicle
     Vector2 dir; // the forward direction (normal) of the bump switch
     Vector2 stdPos; // the bump's position in standard position (with no additional rotation applied)
     Vector2 stdDir; // the bump's direction in standard position (with no additional rotation applied)
-    
+
     bool value;
-    
+
     // these two methods will set the value of the bumps after the "UpdateBumps" function is called in main
     bool Value () {
         return value;
@@ -688,24 +689,24 @@ public:
     void SetRotation (Vector2 direction) {
         dir = Vector2 (stdDir.x, stdDir.y);
         pos = Vector2 (stdPos.x, stdPos.y);
-        
+
         dir.Rotate (direction);
         pos.Rotate (direction);
     }
     void SetRotation (float degrees) {
         dir = Vector2 (stdDir.x, stdDir.y);
         pos = Vector2 (stdPos.x, stdPos.y);
-        
+
         dir.Rotate (degrees);
         pos.Rotate (degrees);
     }
 private:
     void CreateBumpSwitch () {
         dir = dir.getUnitVector ();
-        
+
         stdPos = Vector2 (pos.x, pos.y);
         stdDir = Vector2 (dir.x, dir.y);
-        
+
         value = true;
     }
 };
@@ -718,7 +719,7 @@ public:
         dir = direction;
         radius = rds;
         depth = dpth;
-        
+
         CreateWheel ();
     }
     Wheel (Wheel *wheel) {
@@ -726,11 +727,11 @@ public:
         dir = Vector2 (wheel->dir.x, wheel->dir.y);;
         radius = wheel->radius;
         depth = wheel->depth;
-        
+
         CreateWheel ();
     }
     Wheel () {
-        
+
     }
     // FEHMotor *motor; // a point to the motor associated with the wheel
     Vector2 pos; // position relative to the vehicle
@@ -742,11 +743,11 @@ public:
     Polygon stdShape; // the wheel's shape in standard position (with no rotation applied)
     Vector2 stdPos; // the wheel's position in standard position (with no additional rotation applied)
     Vector2 stdDir; // the wheel's direction in standard position (with no additional rotation applied)
-    
+
     float activePercent;
-    
+
     Vector2 lastForceApplied;
-    
+
     // these two methods will set the percent of the motors after the "UpdateMotors" function is called in main
     void Stop () {
         activePercent = 0;
@@ -762,39 +763,39 @@ public:
     void SetRotation (Vector2 direction) {
         shape = Polygon (stdShape);
         shape.Rotate (direction);
-        
+
         dir = Vector2 (stdDir.x, stdDir.y);
         pos = Vector2 (stdPos.x, stdPos.y);
-        
+
         dir.Rotate (direction);
         pos.Rotate (direction);
     }
     void SetRotation (float degrees) {
         shape = Polygon (stdShape);
         shape.Rotate (degrees);
-        
+
         dir = Vector2 (stdDir.x, stdDir.y);
         pos = Vector2 (stdPos.x, stdPos.y);
-        
+
         dir.Rotate (degrees);
         pos.Rotate (degrees);
     }
 private:
     void CreateWheel () {
         dir = dir.getUnitVector ();
-        
+
         Vector2 shapePos = Vector2 (-radius, depth / 2.0);
         Box box = Box (shapePos, 2 * radius, depth);
         Vector2 points [4] = {box.points[0], box.points[1], box.points[3], box.points[2]};
         stdShape = Polygon (points, 4);
-        
+
         stdShape.Rotate (dir.getAngle() + 90);
         stdShape.Translate (pos);
         shape = Polygon (stdShape);
-        
+
         stdPos = Vector2 (pos.x, pos.y);
         stdDir = Vector2 (dir.x, dir.y);
-        
+
         activePercent = 0;
     }
 };
@@ -818,7 +819,7 @@ public:
         stdChassis = Polygon (chss);
         CM = centerOfMass; // center of mass should usually be Vector2 (0, 0) by default
         radius = rds;
-        
+
         bumpsLength = bmpsLngth;
         // copy the bumps array
         for (int k = 0; k < bumpsLength; k++) {
@@ -842,7 +843,7 @@ public:
         stdChassis = Polygon (veh->stdChassis);
         CM = Vector2 (veh->CM.x, veh->CM.y);
         radius = veh->radius;
-        
+
         bumpsLength = veh->bumpsLength;
         // copy the bumps array
         for (int k = 0; k < bumpsLength; k++) {
@@ -850,7 +851,7 @@ public:
         }
     }
     Vehicle () {
-        
+
     }
     // general variables
     Vector2 pos; // the position of the vehicle
@@ -860,25 +861,25 @@ public:
     Vector2 CM; // center of mass
     float radius;
     Vector2 lastForceApplied; // for reference and drawing
-    
+
     // variables primarily used for simulation
     Vector2 vel; // the velocity of the vehicle
     float angVel; // the angular velocity of the vehicle in degrees per second
-    
-    
+
+
     /*********************** general functions *************************/
-    
+
     // ...
-    
-    
+
+
     /*********************** navigation / movement functions *************************/
-    
+
     // turns counterclockwise; make sure the motor percent doesn't exceed 100; the vehicle's linear speed remains constant
     void Turn (float motorPercent) {
         float w0 = wheels [0].activePercent + motorPercent;
         float w1 = wheels [1].activePercent + motorPercent;
         float w2 = wheels [2].activePercent + motorPercent;
-        
+
         wheels [0].SetPercent (w0);
         wheels [1].SetPercent (w1);
         wheels [2].SetPercent (w2);
@@ -888,15 +889,15 @@ public:
         float w0 = wheels [0].activePercent;
         float w1 = wheels [1].activePercent;
         float w2 = wheels [2].activePercent;
-        
+
         w0 *= 1 - motorPercent/100.0;
         w1 *= 1 - motorPercent/100.0;
         w2 *= 1 - motorPercent/100.0;
-        
+
         w0 += motorPercent;
         w1 += motorPercent;
         w2 += motorPercent;
-        
+
         wheels [0].SetPercent (w0);
         wheels [1].SetPercent (w1);
         wheels [2].SetPercent (w2);
@@ -906,7 +907,7 @@ public:
         float w0 = -0.5 * motorPercent2.x  -  (sqrt3/2.0) * motorPercent2.y;
         float w1 = motorPercent2.x;
         float w2 = -0.5 * motorPercent2.x  +  (sqrt3/2.0) * motorPercent2.y;
-        
+
         wheels [0].SetPercent (w0);
         wheels [1].SetPercent (w1);
         wheels [2].SetPercent (w2);
@@ -917,11 +918,11 @@ public:
         float w0 = 0.5 * direction.x  -  (sqrt3/2.0) * direction.y;
         float w1 = -direction.x;
         float w2 = 0.5 * direction.x  +  (sqrt3/2.0) * direction.y;
-        
+
         w0 *= magnitude;
         w1 *= magnitude;
         w2 *= magnitude;
-        
+
         wheels [0].SetPercent (w0);
         wheels [1].SetPercent (w1);
         wheels [2].SetPercent (w2);
@@ -934,10 +935,10 @@ public:
         wheels [1].Stop ();
         wheels [2].Stop ();
     }
-    
-    
+
+
     /*********************** all these functions are basically for simulation purposes *************************/
-    
+
     void ApplyAcceleration (Vector2 accel) {
         vel = Vector2 (vel.x + accel.x, vel.y + accel.y);
     }
@@ -954,7 +955,7 @@ public:
     void AddRotation (float degrees) {
         chassis.Rotate (degrees);
         dir.Rotate (degrees);
-        
+
         for (int k = 0; k < wheelsLength; k++) {
             wheels [k].Rotate (degrees);
         }
@@ -966,7 +967,7 @@ public:
         dir = direction;
         chassis = Polygon (stdChassis);
         chassis.Rotate (direction);
-        
+
         for (int k = 0; k < wheelsLength; k++) {
             wheels [k].SetRotation (direction);
         }
@@ -978,7 +979,7 @@ public:
         dir = dir.DegreesToVector2 (degrees); // theta = arctan (y / 1) --> tan (theta) = y / 1
         chassis = Polygon (stdChassis);
         chassis.Rotate (degrees);
-        
+
         for (int k = 0; k < wheelsLength; k++) {
             wheels [k].SetRotation (degrees);
         }
@@ -1024,7 +1025,7 @@ public:
         BUTT_MARGIN = 5;
     }
     Button () {
-        
+
     }
     Box box;
     int type;
@@ -1036,7 +1037,7 @@ public:
     // these may need to be moved / initialized elswhere in order to work on the proteus
     static const int dec = 5; // amount pixels to shrink the button by when its pressed
     static const int TEXT_HEIGHT = 10;
-    
+
     // updates the text of the button
     void UpdateText (char txt[]) {
         strcpy (text, txt);
@@ -1105,7 +1106,7 @@ private:
     static const int ABYSS = 0x1a1a1a;
     static const int WALLCOLOR = ABYSS;
     static const int BUTTHIGHLIGHT = INDIANRED;
-    
+
     // draws unpressed button
     void DrawUnpressedButton () {
         switch (type) {
