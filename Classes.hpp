@@ -1,4 +1,4 @@
-#define IS_SIMULATION 0
+#define IS_SIMULATION 1
 #if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
 
@@ -108,8 +108,22 @@ public:
     }
     // returns the vector converted into a unit vector
     Vector2 getUnitVector () {
-        float magnitude = getMagnitude();
-        return Vector2 (x / magnitude, y / magnitude);
+        float magnitude = getMagnitude ();
+        Vector2 unitVector;
+        
+        if (magnitude == 0) {
+            unitVector = Vector2 (0, 0);
+        } else {
+            unitVector = Vector2 (x / magnitude, y / magnitude);
+        }
+        
+        return unitVector;
+    }
+    // clamps the magnitude of the vector to maxLength
+    void ClampMagnitude (float maxLength) {
+        Vector2 unitVect = getUnitVector ();
+        x = unitVect.x * maxLength;
+        y = unitVect.y * maxLength;
     }
     // rotates vector counter-clockwise 90 degrees
     void RotateLeft () {
