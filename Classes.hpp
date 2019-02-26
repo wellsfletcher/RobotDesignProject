@@ -1,4 +1,4 @@
-#define IS_SIMULATION 1
+#define IS_SIMULATION 0
 #if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
 
