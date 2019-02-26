@@ -1,4 +1,4 @@
-#define IS_SIMULATION 1 // also have to define this variable in Simulation.hpp and Classes.hpp
+#define IS_SIMULATION 0 // also have to define this variable in Simulation.hpp and Classes.hpp
 #if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
 
@@ -193,7 +193,7 @@ int main (int argc, char** argv) {
 #include <FEHMotor.h>
 #include <FEHServo.h>
 #include "Simulation.hpp"
-#include <vector> // if this doesn't work, I'm just gonna make a giant ass array
+// #include <vector> // if this doesn't work, I'm just gonna make a giant ass array
 
 
 // priority function declarations
@@ -585,7 +585,7 @@ public:
     
     // perform the state's actions
     virtual const bool Go () {
-        cout << "Ruh roh" << endl;
+        // cout << "Ruh roh" << endl;
         return false;
     }
     // int testValue;
@@ -844,26 +844,20 @@ public:
         length = 0;
         timeWhenStateChanged = TimeNow ();
     }
-    vector<State*> states; // state data vector
+    // vector<State*> states; // state data vector
+    State *states [64];
     int length; // the length of the state data vector
     int currentState;
     float timeWhenStateChanged;
     
     // adds an state/event/task
     void Add (State *newState) { // takes an State struct as an argument
-        // newState->Go();
-        states.push_back (newState); // add the given state to the state data vector
-        states.resize (++length); // resize data vector // this is pretty inefficient but oh well
+        // states.push_back (newState); // add the given state to the state data vector
+        // states.resize (++length); // resize data vector // this is pretty inefficient but oh well
+        states [length++] = newState;
     }
     // goes to the next state
     void Next () {
-        /*
-        if (currentState < length) {
-            currentState++; // increment the current state of the state machine
-        } else {
-            currentState = 0;
-        }
-        */
         // simultanesouly increment the current state of the state machine while checking if the current state was the final state
         if (++currentState >= length) {
             currentState = 0; // if the state previous state was the final state, then restart the state machine
@@ -872,17 +866,13 @@ public:
     }
     
     void Update () {
-        //if (started) { // you could probably work around having to have this check but oh well
-            // call event data function until it returns true (the end condition is met)
-            // (note that if it becomes too difficult to get a returned value from this or whatever, I can just take care of this inside the methods or achieve the effect indirectly; actually I probably should do this this way, at least to start; all I really want this object / statemachine to do is call a list of functions with parameters depending on a state index)
-            // if the end condition is met, then increment the current state and ~note the time in which the state ended
-            // states [currentState]->Go ();
-            cout << "Go! " << currentState << endl;
-            bool stateFinished = states [currentState]->Go ();
-            if (stateFinished) {
-                Next ();
-            }
-        //}
+        // cout << "Go! " << currentState << endl;
+        // call event data function until it returns true (the end condition is met)
+        bool stateFinished = states [currentState]->Go ();
+        // if the end condition is met, then increment the current state and ~note the time in which the state ended
+        if (stateFinished) {
+            Next ();
+        }
     }
     void Start () {
         currentState = 1;
@@ -1164,12 +1154,13 @@ public:
         StateVFFII move_while_flush (this, & Navigator :: MoveWhileFlushDuration, Vector.E, 35, 4.20, F0, F1); // direction, power, duration, bump0, bump1
         StateFF set_servo_angle (this, & Navigator :: SetServoAngle, 110, 1.0); // degrees, waitTime
         
-        StateF stop (this, & Navigator :: StopVehicle, 1.0);
+        StateF stop (this, & Navigator :: StopVehicle, 1.0); // stopTime
         
 
         /************************ initialize OTHER state objects ************************/
         
-        StateF stop_at_the_end (this, & Navigator :: StopVehicle, 0.01);
+        StateF stop_at_the_end (this, & Navigator :: StopVehicle, 0.01); // stopTime
+        StateVFF move_up_ramp_real_quick (this, & Navigator :: MoveDuration, Vector.E, 65, 1.0); // direction, power, duration
         
         
         /************************ ADD REFERENCES of all of the state objects to the temporary state machine ************************/
@@ -1182,7 +1173,7 @@ public:
         TSM.Add (  & stop   );
         TSM.Add (  & turn_clockwise   );
         TSM.Add (  & stop   );
-        TSM.Add (  & move_duration   );
+        TSM.Add (  & move_up_ramp_real_quick   );
         
         TSM.Add (  & stop_at_the_end   ); // probably always a good idea to include a stop function at the end
         
@@ -1192,8 +1183,9 @@ public:
         SM = StateMachine (TSM.timeWhenStateChanged, TSM.currentState); // transfer tempary non-state data into the real state machine
     }
     
-    // resets the navigator object (resets state variables and that sort of thing)
+    // resets the navigator object and stops the vehicle (resets state variables and that sort of thing)
     void Reset () {
+        veh->Stop ();
         SM.Reset ();
     }
     // starts the navigation procedure; does this by setting state = 1
@@ -1483,8 +1475,10 @@ void UpdateHardwareOutput () {
     UpdateServos ();
 }
 void PrintMotorPercents () {
+    /*
     cout << "Motor 1: " << vehicle.wheels[0].activePercent << "%" << endl;
     cout << "Motor 2: " << vehicle.wheels[1].activePercent << "%" << endl;
     cout << "Motor 3: " << vehicle.wheels[2].activePercent << "%" << endl;
+    */
 }
 
