@@ -1,4 +1,4 @@
-#define IS_SIMULATION 0 // also have to define this variable in Simulation.hpp and Classes.hpp
+#define IS_SIMULATION 1 // also have to define this variable in Simulation.hpp and Classes.hpp
 #if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
 
@@ -1107,7 +1107,22 @@ public:
         veh->servo.SetDegree (degrees);
         return (TimeNow() - SM.timeWhenStateChanged > waitTime);
     }
+    
+    /*
+     * Does DDR stuff.
+     */
+    bool DoDDR () {
+        return (TimeNow() - SM.timeWhenStateChanged > 69.420);
+    }
 
+    bool WaitForBlueLight () {
+        return veh->cds.isBlueLight();
+    }
+    
+    bool WaitForRedLight () {
+        return veh->cds.isRedLight();
+    }
+    
     /*
      * Wait for the CDS cell to detect that a light is on, before performing the next action.
      * @return true when the action is complete, false otherwise.
@@ -1120,8 +1135,72 @@ public:
     void Update () {
         UpdateHardwareInput ();
         // SM.Update ();
-        StateMachineTest (); // the current robot control procedure
+        PerformanceTestTwoD1 (); // the current robot control procedure
         UpdateHardwareOutput ();
+    }
+    
+    
+    // perform all of the navigation procedures associated with state machine test
+    void PerformanceTestTwoD1 () {
+        /*
+         * This is set up so that all the information except the state data itself is stored in the SM statemachine.
+         * This includes the currentState and time when the state was last changed.
+         * This non-state data is transfered into a temporary state machine (TSM), in which all the actual state data is then manually added.
+         * This temporary state machine is then updated (which calls the function associated with the current state).
+         * The non-state data in the tempory state machine is then transfered back into SM, so any state transition information is noted.
+         * This is all really inefficent, but it is the easiest way to solve a memory leak issue I was having.
+         */
+        
+        StateMachine TSM = StateMachine (SM.timeWhenStateChanged, SM.currentState); // transfer non-state data into a temporary state machine
+        
+        
+        /************************ initialize SAMPLE state objects ************************/
+        
+        // FYI the (& Navigator :: FunctionName) syntax is used to create a pointer to a function existing within a navigator object; the spaces are for style
+        State do_nothing = State (); // this syntax is different than the other because the compiler would otherwise think this is a method declaration (other than that, the syntax is essentially equivalent)
+        StateVoid wait_for_Light (this, & Navigator :: WaitForLight);
+        
+        StateVFF move_duration (this, & Navigator :: MoveDuration, Vector.EF, 35, 1.0); // direction, power, duration
+        StateVFI move_bump (this, & Navigator :: MoveUntilBump, Vector.D, 35, D0); // direction, power, bumpID
+        StateVFFI move_bump_duration (this, & Navigator :: MoveUntilBumpDuration, Vector.D, 35, 3.0, D1);  // direction, power, duration, bumpID
+        
+        StateFF turn_clockwise (this, & Navigator :: TurnCW, 45, 35); // degrees, power
+        StateFFI turn_clockwise_bump (this, & Navigator :: TurnUntilBumpCW, 45, 35, D0); // maxDegrees, power, bumpID
+        
+        StateVFFII move_while_flush (this, & Navigator :: MoveWhileFlushDuration, Vector.E, 35, 4.20, F0, F1); // direction, power, duration, bump0, bump1
+        StateFF set_servo_angle (this, & Navigator :: SetServoAngle, 110, 1.0); // degrees, waitTime
+        
+        StateF stop (this, & Navigator :: StopVehicle, 1.0); // stopTime
+        
+        
+        /************************ initialize OTHER state objects ************************/
+        
+        StateF stop_at_the_end (this, & Navigator :: StopVehicle, 0.01); // stopTime
+        StateVFF move_up_ramp_real_quick (this, & Navigator :: MoveDuration, Vector.E, 65, 1.0); // direction, power, duration
+        StateFF initial_turn (this, & Navigator :: TurnCW, 135, 35); // degrees, power
+        StateVoid do_DDR_stuff (this, & Navigator :: DoDDR);
+        
+        
+        /************************ ADD REFERENCES of all of the state objects to the temporary state machine ************************/
+        
+        // note you have to start this new state machine using the GUI button (or at least that's how it's currently set up)
+        TSM.Add (  & do_nothing   ); // the do nothing state should always be the first state (state [0])
+        TSM.Add (  & wait_for_Light   );
+        
+        TSM.Add (  & initial_turn   );
+        TSM.Add (  & stop   );
+        TSM.Add (  & move_duration   );
+        TSM.Add (  & stop   );
+        TSM.Add (  & turn_clockwise   );
+        TSM.Add (  & stop   );
+        TSM.Add (  & do_DDR_stuff   );
+        
+        TSM.Add (  & stop_at_the_end   ); // probably always a good idea to include a stop function at the end
+        
+        
+        TSM.Update ();
+        
+        SM = StateMachine (TSM.timeWhenStateChanged, TSM.currentState); // transfer tempary non-state data into the real state machine
     }
     
     // perform all of the navigation procedures associated with state machine test
@@ -1161,7 +1240,8 @@ public:
         
         StateF stop_at_the_end (this, & Navigator :: StopVehicle, 0.01); // stopTime
         StateVFF move_up_ramp_real_quick (this, & Navigator :: MoveDuration, Vector.E, 65, 1.0); // direction, power, duration
-        
+        StateFF initial_turn (this, & Navigator :: TurnCW, 135, 35); // degrees, power
+
         
         /************************ ADD REFERENCES of all of the state objects to the temporary state machine ************************/
         
@@ -1169,11 +1249,11 @@ public:
         TSM.Add (  & do_nothing   ); // the do nothing state should always be the first state (state [0])
         TSM.Add (  & wait_for_Light   );
         
+        TSM.Add (  & initial_turn   );
+        TSM.Add (  & stop   );
         TSM.Add (  & move_duration   );
         TSM.Add (  & stop   );
         TSM.Add (  & turn_clockwise   );
-        TSM.Add (  & stop   );
-        TSM.Add (  & move_up_ramp_real_quick   );
         
         TSM.Add (  & stop_at_the_end   ); // probably always a good idea to include a stop function at the end
         
