@@ -165,8 +165,9 @@ public:
         // netForce = Vector2 (.08, .08);
         // netTorque = 10;
 
+        float MAGIC_ANG_ACCEL_NUMBER = 1.0; // a fudged number to make the torque in the simulation more closely resemble reality
         Vector2 netAccel = Vector2 (netForce.x / MASS, netForce.y / MASS);
-        float angularAccel = -netTorque / MoI;
+        float angularAccel = -netTorque / MoI * MAGIC_ANG_ACCEL_NUMBER;
 
         // convert back into correct units
         angularAccel = angularAccel * RADS_TO_DEGREES * deltaTime * deltaTime; // rad/s/s --> degrees/frame/frame

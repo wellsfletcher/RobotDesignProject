@@ -64,7 +64,6 @@ void Reshape(int w, int h) {
     glLoadIdentity();
     gluOrtho2D(0.0, 320, 0.0, 240);             // map unit square to viewport
     glMatrixMode(GL_MODELVIEW);
-    // glutPostRedisplay ();                       // request redisplay
 }
 
 void Display (void) {                          // display callback
@@ -262,7 +261,9 @@ using namespace std;
 
 /************************************************************************************************ DECLERATIONS ************************************************************************************************/
 
+
 /************************************************************************ PRIORITY DECLERATIONS ************************************************************************/
+
 
 void DrawBox (Box box);
 void DrawEdge (Edge edge);
@@ -289,6 +290,7 @@ void PrintMotorPercents ();
 #define D1 0
 #define F0 1
 
+
 /************************ HARDWARE VARIABLES ************************/
 
 FEHMotor motor0 (FEHMotor::Motor0, 9.0); // the left motor
@@ -306,7 +308,10 @@ FEHServo servo0 (FEHServo::Servo0);
 AnalogInputPin cds0 (FEHIO::P0_0);
 
 
-/************************************************************************ CLASS DECLERATIONS ************************************************************************/
+
+
+/************************************************************************ DRAWING CLASS DECLERATIONS ************************************************************************/
+
 
 class Course {
 public:
@@ -559,8 +564,17 @@ private:
 };
 
 
+
+
+/************************************************************************ NAVIGATION CLASS DECLERATIONS ************************************************************************/
+
+
+/************************ MISC DECLARATIONS ************************/
+
 class Navigator;
 
+
+/************************ STATE DECLARATIONS ************************/
 
 // this is the base class for the states used in the state machine object
 class State {
@@ -577,7 +591,6 @@ public:
     // int testValue;
 private:
 };
-
 
 
 // this object extends the State base class
@@ -602,23 +615,70 @@ private:
 
 
 // this object extends the State base class
-class StateF : public State {
+class StateVFFII : public State {
 public:
-    StateF (Navigator *navPtr, bool (Navigator::*funcPtr) (float), float flt0) {
+    StateVFFII (Navigator *navPtr, bool (Navigator::*funcPtr) (Vector2, float, float, int, int), Vector2 vctr, float flt0, float flt1, int int0, int int1) {
         nav = navPtr;
         functionPtr = funcPtr;
+        v0 = vctr;
+        
         f0 = flt0;
+        f1 = flt1;
+        
+        i0 = int0;
+        i1 = int1;
     }
-    StateF () {
+    StateVFFII () {
         
     }
     Navigator *nav;
-    bool (Navigator::*functionPtr) (float); // declares a pointer to a function
+    bool (Navigator::*functionPtr) (Vector2, float, float, int, int); // declares a pointer to a function
+    
+    Vector2 v0;
+    
     float f0;
+    float f1;
+    
+    int i0;
+    int i1;
     
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
     virtual const bool Go () {
-        return (nav->*functionPtr) (f0); // calls the function in which functionPtr is pointing to
+        return (nav->*functionPtr) (v0, f0, f1, i0, i1); // calls the function in which functionPtr is pointing to
+    }
+private:
+};
+
+
+// this object extends the State base class
+class StateVFFI : public State {
+public:
+    StateVFFI (Navigator *navPtr, bool (Navigator::*funcPtr) (Vector2, float, float, int), Vector2 vctr, float flt0, float flt1, int int0) {
+        nav = navPtr;
+        functionPtr = funcPtr;
+        v0 = vctr;
+        
+        f0 = flt0;
+        f1 = flt1;
+        
+        i0 = int0;
+    }
+    StateVFFI () {
+        
+    }
+    Navigator *nav;
+    bool (Navigator::*functionPtr) (Vector2, float, float, int); // declares a pointer to a function
+    
+    Vector2 v0;
+    
+    float f0;
+    float f1;
+    
+    int i0;
+    
+    // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
+    virtual const bool Go () {
+        return (nav->*functionPtr) (v0, f0, f1, i0); // calls the function in which functionPtr is pointing to
     }
 private:
 };
@@ -651,34 +711,120 @@ private:
 };
 
 
-/*
 // this object extends the State base class
-class MoveDurationState : public State {
+class StateVFI : public State {
 public:
-    MoveDurationState (Navigator *navPtr, bool (Navigator::*fctPtr) (Vector2, float, float), Vector2 dir, float pwr, float dur) {
+    StateVFI (Navigator *navPtr, bool (Navigator::*funcPtr) (Vector2, float, int), Vector2 vctr, float flt0, int int0) {
         nav = navPtr;
-        functionPtr = fctPtr;
-        direction = dir;
-        power = pwr;
-        duration = dur;
+        functionPtr = funcPtr;
+        v0 = vctr;
+        
+        f0 = flt0;
+        
+        i0 = int0;
     }
-    MoveDurationState () {
+    StateVFI () {
         
     }
     Navigator *nav;
-    bool (Navigator::*functionPtr) (Vector2, float, float); // declares a pointer to a function
-    Vector2 direction;
-    float power;
-    float duration;
+    bool (Navigator::*functionPtr) (Vector2, float, int); // declares a pointer to a function
+    
+    Vector2 v0;
+    
+    float f0;
+    
+    int i0;
     
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
     virtual const bool Go () {
-        return (nav->*functionPtr) (direction, power, duration); // calls the function in which functionPtr is pointing to
+        return (nav->*functionPtr) (v0, f0, i0); // calls the function in which functionPtr is pointing to
     }
 private:
 };
-*/
 
+
+// this object extends the State base class
+class StateFFI : public State {
+public:
+    StateFFI (Navigator *navPtr, bool (Navigator::*funcPtr) (float, float, int), float flt0, float flt1, int int0) {
+        nav = navPtr;
+        functionPtr = funcPtr;
+        
+        f0 = flt0;
+        f1 = flt1;
+        
+        i0 = int0;
+    }
+    StateFFI () {
+        
+    }
+    Navigator *nav;
+    bool (Navigator::*functionPtr) (float, float, int); // declares a pointer to a function
+    
+    float f0;
+    float f1;
+    
+    int i0;
+    
+    // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
+    virtual const bool Go () {
+        return (nav->*functionPtr) (f0, f1, i0); // calls the function in which functionPtr is pointing to
+    }
+private:
+};
+
+
+// this object extends the State base class
+class StateFF : public State {
+public:
+    StateFF (Navigator *navPtr, bool (Navigator::*funcPtr) (float, float), float flt0, float flt1) {
+        nav = navPtr;
+        functionPtr = funcPtr;
+
+        f0 = flt0;
+        f1 = flt1;
+    }
+    StateFF () {
+        
+    }
+    Navigator *nav;
+    bool (Navigator::*functionPtr) (float, float); // declares a pointer to a function
+    
+    float f0;
+    float f1;
+    
+    // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
+    virtual const bool Go () {
+        return (nav->*functionPtr) (f0, f1); // calls the function in which functionPtr is pointing to
+    }
+private:
+};
+
+
+// this object extends the State base class
+class StateF : public State {
+public:
+    StateF (Navigator *navPtr, bool (Navigator::*funcPtr) (float), float flt0) {
+        nav = navPtr;
+        functionPtr = funcPtr;
+        f0 = flt0;
+    }
+    StateF () {
+        
+    }
+    Navigator *nav;
+    bool (Navigator::*functionPtr) (float); // declares a pointer to a function
+    float f0;
+    
+    // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
+    virtual const bool Go () {
+        return (nav->*functionPtr) (f0); // calls the function in which functionPtr is pointing to
+    }
+private:
+};
+
+
+/************************ STATE MACHINE DECLARATION ************************/
 
 class StateMachine {
 public:
@@ -749,13 +895,13 @@ private:
 };
 
 
+/************************ NAVIGATOR DECLARATION ************************/
+
 class Navigator {
 public:
     Navigator (Vehicle *vehicle) {
         veh = vehicle;
         SM = StateMachine ();
-        state = 0;
-        actionToPerform = 0;
 
         timeWhenRotationStarted = 0;
         timeRequiredForRotation = 0;
@@ -763,19 +909,12 @@ public:
 
         leftTurnLimitReached = false;
         rightTurnLimitReached = false;
-        
-        InitStateMachineTest ();
-        timeSinceAction = TimeNow ();
     }
     Navigator () {
 
     }
     Vehicle *veh;
     StateMachine SM;
-    State states [99]; // static reference to all the states used in the state machine (necessary to prevent memory leaks)
-    int state;
-    int actionToPerform;
-    float timeSinceAction;
 
     float timeWhenRotationStarted;
     float timeRequiredForRotation;
@@ -805,45 +944,101 @@ public:
 
     /************************ TASK FUNCTIONS ************************/
 
+    /*
+     * Stops the vehicle by setting the percent power of all of the wheels to zero. Waits @stopTime in seconds.
+     * @return true when the action is complete, false otherwise.
+     */
     bool StopVehicle (float stopTime) {
         veh->Stop ();
-        return TestEndCondition (TimeNow() - SM.timeWhenStateChanged > stopTime);
+        return (TimeNow() - SM.timeWhenStateChanged > stopTime);
     }
 
-    void TurnCW (float degrees, float power) {
-        if (TurnDegrees (degrees, power)) {
-            state++;
-            timeSinceAction = TimeNow ();
-        }
+    /*
+     * Rotates the vehicle clockwise with the given @power until the given angle has been reached.
+     * (r1) Note that the rotation has not been completly calibrated, so it is currently not very accurate (though it should still be precise).
+     * (r2) Note that power is added onto the current power of each motor, so the vehicle can theoretically move and rotate at the same time.
+     * @degrees
+     *      the target angle in degrees clockwise
+     * @power
+     *      the power dedicated to the rotation
+     * @return true when the action is complete, false otherwise.
+     */
+    bool TurnCW (float degrees, float power) {
+        PrintMotorPercents ();
+        return TurnDegrees (degrees, power);
     }
 
-    void TurnCCW (float degrees, float power) {
-        if (TurnDegrees (-degrees, -power)) {
-            state++;
-            timeSinceAction = TimeNow ();
-        }
+    /*
+     * Rotates the vehicle counter clockwise with the given @power until the given angle has been reached.
+     * (r1) Note that the rotation has not been completly calibrated, so it is currently not very accurate (though it should still be precise).
+     * (r2) Note that power is added onto the current power of each motor, so the vehicle can theoretically move and rotate at the same time.
+     *
+     * @degrees
+     *      the target angle in degrees counter clockwise
+     * @power
+     *      the power dedicated to the rotation
+     *
+     * @return true when the action is complete, false otherwise.
+     */
+    bool TurnCCW (float degrees, float power) {
+        return TurnDegrees (-degrees, -power);
     }
 
-    void TurnUntilBumpCW (int bumpID, float power, float maxDegrees) {
+    /*
+     * Rotates the vehicle clockwise with the given @power until the bump switch with index @bumpID is activated or until the max angle has been reached.
+     * ()   Notes (r1) and (r2) still apply.
+     * (r3) Note that this function does not "undo" the rotation unless the maximum angle angle is reached.
+     *      So this function should generally be used only when a STOP function immediately follows it.
+     *
+     * @bumpID
+     *      index of the bump switch that the function waits until is activated
+     * @power
+     *      the power dedicated to the rotation
+     * @maxDegrees
+     *      the maximum angle in degrees counter clockwise
+     *
+     * @return true when the action is complete, false otherwise.
+     */
+    bool TurnUntilBumpCW (float maxDegrees, float power, int bumpID) {
         // veh->Turn (-power);
-        TestEndCondition (TurnDegrees (maxDegrees, power) || !veh->bumps [bumpID].Value());
-        // I may also need to "undo" the rotation after this is complete (only veh->bumps [bumpID].Value() == false)
-        // otherwise this function should generally only be used when a STOP function immediately follows it
+        return (TurnDegrees (maxDegrees, power) || !veh->bumps [bumpID].Value());
     }
 
-    void TurnUntilBumpCCW (int bumpID, float power, float maxDegrees) {
+    /*
+     * Rotates the vehicle counter clockwise with the given @power until the bump switch with index @bumpID is activated or until the max angle has been reached.
+     * ()   Notes (r1) and (r2) still apply.
+     * (r3) Note that this function does not "undo" the rotation unless the maximum angle angle is reached.
+     *      So this function should generally be used only when a STOP function immediately follows it.
+     * (*)  Note this function was not doing during performance test one.
+     * (**) Note I changed the order of this function parameters, as well as the order of some other ones...
+     *
+     * @bumpID
+     *      index of the bump switch that the function waits until is activated
+     * @power
+     *      the power dedicated to the rotation
+     * @maxDegrees
+     *      the maximum angle in degrees counter clockwise
+     *
+     * @return true when the action is complete, false otherwise.
+     */
+    bool TurnUntilBumpCCW (float maxDegrees, float power, int bumpID) {
         // veh->Turn (-power);
-        TestEndCondition (TurnDegrees (-maxDegrees, -power) || !veh->bumps [bumpID].Value());
+        return (TurnDegrees (-maxDegrees, -power) || !veh->bumps [bumpID].Value());
     }
 
+    /*
+     * Moves the vehicle in the given @direction with the given @power until the given @duration in seconds has passed.
+     * @return true when the action is complete, false otherwise.
+     */
     bool MoveDuration (Vector2 direction, float power, float duration) {
+        PrintMotorPercents ();
         veh->Move (direction, power);
-        return TestEndCondition (TimeNow() - SM.timeWhenStateChanged > duration);
+        return (TimeNow() - SM.timeWhenStateChanged > duration);
     }
 
     /* Maintains being flush with a wall while moving in a direction.
      * Note that bump0 and bump1 must correstpond to a 0 and 1 bump switch ID
-     * in order for it to know which way to turn. Also assumes that the
+     * in order for the function to know which way to turn. Also assumes that the
      * vehicle is already flush with the wall on the appropriate side. Note
      * that the direction should be going towards both the wall and the
      * desired direction in which the vehicle should go.
@@ -852,10 +1047,12 @@ public:
      *      bump switch identifier 0
      * @bump1
      *      bump switch identifier 1
+     *
+     * @return true when the action is complete, false otherwise.
     */
     bool leftTurnLimitReached;
     bool rightTurnLimitReached;
-    void MoveWhileFlushDuration (Vector2 direction, int bump0, int bump1, float power, float duration) {
+    bool MoveWhileFlushDuration (Vector2 direction, float power, float duration, int bump0, int bump1) {
         float maxDegrees = 30;
         float turnPower = power / 4.0;
 
@@ -884,479 +1081,123 @@ public:
             rightTurnLimitReached = false;
         }
 
-        if (TestEndCondition (TimeNow() - timeSinceAction > duration)) {
+        bool isFinished = (TimeNow() - SM.timeWhenStateChanged > duration);
+        if (isFinished) {
             leftTurnLimitReached = false;
             rightTurnLimitReached = false;
         }
+        return isFinished;
     }
 
-    void MoveBump (Vector2 direction, int bumpID, float power) {
+    /*
+     * Moves the vehicle in the given @direction with the given @power until the bump switch with index @bumpID is activated.
+     * @return true when the action is complete, false otherwise.
+     */
+    bool MoveUntilBump (Vector2 direction, float power, int bumpID) {
         veh->Move (direction, power);
-        if (!veh->bumps [bumpID].Value()) {
-            state++;
-            timeSinceAction = TimeNow ();
-        }
+        return !veh->bumps [bumpID].Value();
     }
+    
+    
+    /*
+     * Moves the vehicle in the given @direction with the given @power until the bump switch with index @bumpID is activated or until the @maxDuration is reached.
+     * @return true when the action is complete, false otherwise.
+     */
+    bool MoveUntilBumpDuration (Vector2 direction, float power, float maxDuration, int bumpID) {
+        veh->Move (direction, power);
+        return !veh->bumps [bumpID].Value() || (TimeNow() - SM.timeWhenStateChanged > maxDuration);
+    }
+    
 
-    void SetServoAngle (float degrees, float waitTime) {
+    /*
+     * Set the servos angle to @degrees, and waits for @waitTime in seconds until performing the next action.
+     * @return true when the action is complete, false otherwise.
+     */
+    bool SetServoAngle (float degrees, float waitTime) {
         veh->servo.SetDegree (degrees);
-        TestEndCondition (TimeNow() - timeSinceAction > waitTime);
+        return (TimeNow() - SM.timeWhenStateChanged > waitTime);
     }
 
+    /*
+     * Wait for the CDS cell to detect that a light is on, before performing the next action.
+     * @return true when the action is complete, false otherwise.
+     */
     bool WaitForLight () {
-        return TestEndCondition (veh->cds.isLight());
+        return veh->cds.isLight();
     }
-
-    // (returns the given condition just so that the condition doesn't have to be tested twice)
-    bool TestEndCondition (bool conditionIsTrue) {
-        // if condition is true, then increment the current state (in order to move onto the next action) and update the timeSinceAction
-        if (conditionIsTrue) {
-            state++;
-            timeSinceAction = TimeNow ();
-        }
-        return conditionIsTrue;
-    }
-
-    // task variable definitions; in retrospect, I definetly should have used an enumeration to do these
-    static const int DO_NOTHING = 0;
-    static const int STOP = 1;
-    static const int WAIT_FOR_START_LIGHT = 100;
-
-    static const int TURN_45_CW = 2;
-    static const int MOVE_E_DURATION = 14;
-
-    static const int MOVE_DE_DURATION = 3;
-    static const int MOVE_DE_BUMP_D0 = 4;
-
-    static const int MOVE_FA_DURATION = 5;
-    static const int MOVE_FA_BUMP_F1 = 6;
-
-    static const int TURN_CW_BUMP_F0 = 7;
-    static const int GRIND_UP_RAMP = 8;
-
-    static const int MOVE_E_BUMP_D1 = 9;
-    static const int MOVE_AB_DURATION = 10;
-    static const int MOVE_C_BUMP_D0 = 11;
-    static const int TURN_CW_BUMP_B1 = 12;
-    static const int MOVE_F_DURATION = 13;
-
-    static const int TURN_TOWARDS_LEVER = 45;
-    static const int DO_FINAL_LEVER_MOVEMENT = 46;
-    static const int LOWER_SERVO = 50;
-
-    static const int END = 999;
 
     // update the navigator; must be called repeatedly for everything to work properly
     void Update () {
         UpdateHardwareInput ();
         // SM.Update ();
-        InitStateMachineTest (); // reinitializes the statemachine and calls its update function
+        StateMachineTest (); // the current robot control procedure
         UpdateHardwareOutput ();
     }
     
-    // initializes the series of actions required for performance
-    void InitStateMachineTest () {
-        // int num = 0;
-        // MoveDurationState *moveDuration = new MoveDurationState (this, &Navigator::MoveDuration, Vector.EF, 35, 1.0);
-        // MoveDurationState moveDuration (this, &Navigator::MoveDuration, Vector.EF, 35, 1.0);
-        // states = {  moveDuration  };
-        // states [num++] = MoveDurationState (this, &Navigator::MoveDuration, Vector.EF, 35, 1.0);
-        //- states [num++] = moveDuration;
-
-        // int anArray [] = {1, 2, 3, 4};
-        // ope this is actually making a bunch of memory leaks
-        // SM.Add (  &moveDuration  );
-        //- SM.Add (  &(states [0])  );
-    
+    // perform all of the navigation procedures associated with state machine test
+    void StateMachineTest () {
         /* 
          * This is set up so that all the information except the state data itself is stored in the SM statemachine.
-         * This includes the currentState, whether the state machine has started, and time variables.
-         * This non-state data is transfered into a temporary state machine (TSM), in which all the real state data is then manually added to it.
-         * This temporary state machine is then updated (which calls the function associated with the current state).]
+         * This includes the currentState and time when the state was last changed.
+         * This non-state data is transfered into a temporary state machine (TSM), in which all the actual state data is then manually added.
+         * This temporary state machine is then updated (which calls the function associated with the current state).
          * The non-state data in the tempory state machine is then transfered back into SM, so any state transition information is noted.
          * This is all really inefficent, but it is the easiest way to solve a memory leak issue I was having.
          */
-        // StateMachine TSM = StateMachine (SM); // transfer non-state data into a temporary state machine
-        StateMachine TSM = StateMachine (SM.timeWhenStateChanged, SM.currentState);
-        
-        // note that the (& Navigator :: FunctionName) syntax is used to create a pointer to a function existing within a navigator object; the spaces are for style
-        State doNothing = State (); // this syntax is different than the other because the compiler would otherwise think this is a method declaration (other than that, the syntax is essentially equivalent)
-        StateVoid waitForLight (this, & Navigator :: WaitForLight);
-        StateVFF moveDuration (this, & Navigator :: MoveDuration, Vector.EF, 35, 1.0);
-        StateF stop (this, & Navigator :: StopVehicle, 1.0);
 
-        // note you have to start this new state machine using the GUI button (or at least that's how it's currently set up)
-        TSM.Add (  & doNothing   ); // the do nothing state should always be the first state
-        TSM.Add (  & waitForLight   );
-        TSM.Add (  & moveDuration   );
-        TSM.Add (  & stop   );
-        TSM.Add (  & moveDuration   );
-        TSM.Add (  & stop   );
+        StateMachine TSM = StateMachine (SM.timeWhenStateChanged, SM.currentState); // transfer non-state data into a temporary state machine
         
-        // TSM.Start ();
+        
+        /************************ initialize SAMPLE state objects ************************/
+        
+        // FYI the (& Navigator :: FunctionName) syntax is used to create a pointer to a function existing within a navigator object; the spaces are for style
+        State do_nothing = State (); // this syntax is different than the other because the compiler would otherwise think this is a method declaration (other than that, the syntax is essentially equivalent)
+        StateVoid wait_for_Light (this, & Navigator :: WaitForLight);
+        
+        StateVFF move_duration (this, & Navigator :: MoveDuration, Vector.EF, 35, 1.0); // direction, power, duration
+        StateVFI move_bump (this, & Navigator :: MoveUntilBump, Vector.D, 35, D0); // direction, power, bumpID
+        StateVFFI move_bump_duration (this, & Navigator :: MoveUntilBumpDuration, Vector.D, 35, 3.0, D1);  // direction, power, duration, bumpID
+        
+        StateFF turn_clockwise (this, & Navigator :: TurnCW, 45, 35); // degrees, power
+        StateFFI turn_clockwise_bump (this, & Navigator :: TurnUntilBumpCW, 45, 35, D0); // maxDegrees, power, bumpID
+        
+        StateVFFII move_while_flush (this, & Navigator :: MoveWhileFlushDuration, Vector.E, 35, 4.20, F0, F1); // direction, power, duration, bump0, bump1
+        StateFF set_servo_angle (this, & Navigator :: SetServoAngle, 110, 1.0); // degrees, waitTime
+        
+        StateF stop (this, & Navigator :: StopVehicle, 1.0);
+        
+
+        /************************ initialize OTHER state objects ************************/
+        
+        StateF stop_at_the_end (this, & Navigator :: StopVehicle, 0.01);
+        
+        
+        /************************ ADD REFERENCES of all of the state objects to the temporary state machine ************************/
+        
+        // note you have to start this new state machine using the GUI button (or at least that's how it's currently set up)
+        TSM.Add (  & do_nothing   ); // the do nothing state should always be the first state (state [0])
+        TSM.Add (  & wait_for_Light   );
+        
+        TSM.Add (  & move_duration   );
+        TSM.Add (  & stop   );
+        TSM.Add (  & turn_clockwise   );
+        TSM.Add (  & stop   );
+        TSM.Add (  & move_duration   );
+        
+        TSM.Add (  & stop_at_the_end   ); // probably always a good idea to include a stop function at the end
+        
+        
         TSM.Update ();
         
         SM = StateMachine (TSM.timeWhenStateChanged, TSM.currentState); // transfer tempary non-state data into the real state machine
-        
-        /*
-        StateMachine SMTest = StateMachine ();
-        MoveDurationState moveDuration (this, &Navigator::MoveDuration, Vector.EF, 35, 1.0);
-        
-        SMTest.Add (  &moveDuration  );
-        
-        SMTest.Start ();
-        SMTest.Update ();
-        */
     }
-    // performs the series of actions required for performance test one; must be repeatedly called from a loop; is draft 2 (this was the one used in the actual performance test)
-    void PerformanceTestOneD2 () {
-        UpdateHardwareInput ();
-
-        // int sequence [] = {WAIT_FOR_START_LIGHT, MOVE_F_DURATION, MOVE_A_DURATION, MOVE_A_BUMP_F1, TURN_CW_BUMP_F0, STOP, GRIND_UP_RAMP, MOVE_E_BUMP_D1, MOVE_AB_DURATION, MOVE_C_BUMP_D0, TURN_CW_BUMP_B1, STOP, MOVE_A_DURATION, STOP, LOWER_SERVO, STOP, END}; // currently, the first and last items should always be DO_NOTHING and END
-        //  int sequence [] = {WAIT_FOR_START_LIGHT, TURN_45_CW, MOVE_E_DURATION, MOVE_FA_DURATION, MOVE_FA_BUMP_F1, TURN_CW_BUMP_F0, STOP, GRIND_UP_RAMP, MOVE_E_BUMP_D1, MOVE_AB_DURATION, MOVE_C_BUMP_D0, TURN_CW_BUMP_B1, STOP, MOVE_F_DURATION, STOP, TURN_TOWARDS_LEVER, STOP, LOWER_SERVO, STOP, DO_FINAL_LEVER_MOVEMENT, STOP, END}; // currently, the first and last items should always be DO_NOTHING and END
-        //   int sequence [] = {WAIT_FOR_START_LIGHT, TURN_45_CW, MOVE_E_DURATION, MOVE_FA_DURATION, MOVE_FA_BUMP_F1, TURN_CW_BUMP_F0, STOP, GRIND_UP_RAMP, MOVE_E_BUMP_D1, MOVE_AB_DURATION, MOVE_C_BUMP_D0, TURN_CW_BUMP_B1, STOP, TURN_TOWARDS_LEVER, STOP, MOVE_F_DURATION, STOP, LOWER_SERVO, STOP, DO_FINAL_LEVER_MOVEMENT, STOP, END}; // currently, the first and last items should always be DO_NOTHING and END
-        int sequence [] = {WAIT_FOR_START_LIGHT, TURN_45_CW, MOVE_E_DURATION, MOVE_FA_DURATION, MOVE_FA_BUMP_F1, TURN_CW_BUMP_F0, STOP, GRIND_UP_RAMP, MOVE_E_BUMP_D1, MOVE_AB_DURATION, MOVE_C_BUMP_D0, TURN_CW_BUMP_B1, STOP, TURN_TOWARDS_LEVER, STOP, MOVE_F_DURATION, STOP, DO_FINAL_LEVER_MOVEMENT, STOP, LOWER_SERVO, STOP, END}; // currently, the first and last items should always be DO_NOTHING and END
-        actionToPerform = sequence [state];
-
-        float timeScale = 0.2; // for (simulation) testing purposes // whoops I forgot to change this during the real testing & performance tests
-
-        float power = 50; // note: power was at -35 (or maybe -25) for that speed video I recorded // not used
-        float stopTime = 1.0;
-        Vector2 direction;
-
-        float duration5 = 3.0 * timeScale; // short duration at the beginning spent moving forward
-        float power5 = 35;
-
-        float duration0 = 3.0 * timeScale; // time spent initially going right
-        float power0 = 50;
-
-        float power_MOVE_FA_BUMP_F1 = 35;
-        float power_TURN_CW_BUMP_F0 = 35;
-
-        float duration1 = 10.0 * timeScale; // time going at max power up the ramp
-        float power1 = 60;
-
-        float power_MOVE_E_BUMP_D1 = 35;
-
-        float duration2 = 0.5 * timeScale; // short duration after colliding with the wall
-        float power2 = 35;
-
-        // power for going left towards the lever
-        float power_MOVE_C_BUMP_D0 = 39; // was 35, then 50
-
-        float duration3 = 0.8 * timeScale; // short duration spent backing up from lever // was 0.5
-        float power3 = 35;
-
-        float duration4 = 2.5 * timeScale; // duration spent waiting for the servo to lower
-
-        float durationX = 1.5 * timeScale; // duration spent performing final motion to get to the lever
-        float powerX = 35;
-
-        // float power10 = 50;
-
-
-        switch (actionToPerform) {
-            case DO_NOTHING: {
-                timeSinceAction = TimeNow ();
-            } break;
-
-            case WAIT_FOR_START_LIGHT: {
-                WaitForLight ();
-                veh->SetPosition (  Vector2 (9,-63)  );
-            } break;
-
-            case STOP: { // turn 45 degrees CW
-                StopVehicle (stopTime);
-            } break;
-
-            case MOVE_E_DURATION: {
-                MoveDuration (Vector.E, power5, duration5);
-            } break;
-
-            case TURN_45_CW: { // now turn 15 degrees
-                TurnCW (7, power);
-            } break;
-
-            case TURN_TOWARDS_LEVER: { // now turn 15 degrees
-                TurnCCW (23, power);
-            } break;
-
-            case DO_FINAL_LEVER_MOVEMENT: { // move in DE direction (rightwards)
-                MoveDuration (Vector.EF, powerX, durationX); // not used
-            } break;
-
-            case MOVE_DE_BUMP_D0: { // move in DE direction (rightwards) but slower, and stop once the bump switch is pressed
-                MoveBump (Vector.DE, F0, power); // not used
-            } break;
-
-            case MOVE_FA_DURATION: { // move in DE direction (rightwards)
-                MoveDuration (Vector.FA, power0, duration0); // changed
-            } break;
-
-            case MOVE_FA_BUMP_F1: { // move in DE direction (rightwards) but slower, and stop once the bump switch is pressed
-                MoveBump (Vector.FA, F1, power_MOVE_FA_BUMP_F1);
-            } break;
-
-            case TURN_CW_BUMP_F0: { // note that the vehicle does not necessarily stop
-                float degreeTurnLimit = 90;
-                TurnUntilBumpCW (F0, power_TURN_CW_BUMP_F0, degreeTurnLimit);
-                veh->SetPosition (  Vector2 (32, -60)  );
-            } break;
-
-            // go up the ramp
-            case GRIND_UP_RAMP: {
-                MoveDuration (Vector.E, power1, duration1); // .DE
-                // may also want to implement a thing here to make the vehicle stay flush against the wall
-                // MoveWhileFlushDuration (Vector.E, F0, F1, power * 1.7, duration1);
-            } break;
-
-            case MOVE_E_BUMP_D1: { // move in DE direction (rightwards) but slower, and stop once the bump switch is pressed
-                MoveBump (Vector.E, D1, power_MOVE_E_BUMP_D1); // .DE
-                // may also want to implement a thing here to make the vehicle stay flush against the wall
-            } break;
-
-            // move back from the wall
-            case MOVE_AB_DURATION: { // move back a little
-                MoveDuration (Vector.AB, power2, duration2);
-                veh->SetPosition (  Vector2 (32, -8)  );
-            } break;
-
-            case MOVE_C_BUMP_D0: { // C0 == D0
-                MoveBump (Vector.C, D0, power_MOVE_C_BUMP_D0);
-            } break;
-
-            // try to get flush with the lever
-            case TURN_CW_BUMP_B1: { // getting flush with the lever; note that the vehicle does not necessarily stop
-                float degreeTurnLimit = 45;
-                // TurnUntilBumpCW (B1, power, degreeTurnLimit); // CCW D1 // // ~~~C1 = B1
-                TurnUntilBumpCCW (D1, power, degreeTurnLimit); // THIS step is not happening for some reason; should fix this in the future.
-                veh->SetPosition (  Vector2 (12, -12)  );
-            } break;
-
-            case MOVE_F_DURATION: { // short duration spent backing up from lever
-                // MoveDuration (Vector.F, power3, duration3); // .A
-                MoveDuration (Vector.Aa, power3, duration3); // .A
-            } break;
-
-            // lower the servo
-            case LOWER_SERVO: {
-                SetServoAngle (30, duration4); // zoinx
-            } break;
-
-            case END: {
-                actionToPerform = 0;
-            } break;
-
-            default: {
-                // ...
-            } break;
-        }
-        UpdateHardwareOutput ();
-    }
-    // performs the series of actions required for performance test one; must be repeatedly called from a loop; is draft 1
-    void PerformanceTestOneD1 () {
-        UpdateHardwareInput ();
-
-        float timeScale = 0.2; // for testing purposes
-
-        float power = 50; // note: power was at -35 (or maybe -25) for that speed video I recorded
-        float stopTime = 1.0;
-        Vector2 direction;
-
-        float duration0 = 3.0 * timeScale;
-        float duration1 = 10.0 * timeScale;
-        float duration2 = 10.0 * timeScale;
-
-        switch (state) {
-            case 0: {
-                timeSinceAction = TimeNow ();
-            } break;
-            case 1: { // turn 45 degrees CW
-                // cout << Vector.D.getAngle() << endl;
-                if (TurnDegrees (-45, -power)) {
-                    state++;
-                    timeSinceAction = TimeNow ();
-                }
-            } break;
-            case 2: { // stop the vehicle
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > stopTime) {
-                    state++;
-                    timeSinceAction = TimeNow ();
-                }
-            } break;
-            case 3: { // move in DE direction (rightwards)
-                veh->Move (Vector.DE, power);
-                if (TimeNow() - timeSinceAction > duration0) {
-                    state++;
-                    timeSinceAction = TimeNow ();
-                }
-            } break;
-            case 4: { // move in DE direction (rightwards) but slower, and stop once the bump switch is pressed
-                veh->Move (Vector.DE, power / 2.0);
-                if (!veh->bumps [D1].Value()) {
-                    state++;
-                    timeSinceAction = TimeNow ();
-                }
-            } break;
-            case 5: {
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > stopTime) {
-                    state = 0;
-                    timeSinceAction = TimeNow ();
-                }
-            } break;
-            default: {
-                // ...
-            } break;
-        }
-        UpdateHardwareOutput ();
-    }
-    // performs vehicle test procedure in which the vehicle drives forward; must be repeatedly called from a loop
-    void ForwardTest () {
-        UpdateHardwareInput ();
-
-        float power = -80; // note: power was at -35 (or maybe -25) for that speed video I recorded
-        float timeBetween = 10.0;
-        Vector2 direction;
-
-        switch (state) {
-            case 0:
-                timeSinceAction = TimeNow ();
-                break;
-            case 1:
-                veh->Move (Vector.right, power);
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 2;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 2:
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 0;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            default:
-                break;
-        }
-        UpdateHardwareOutput ();
-    }
-    // performs vehicle test procedure in which the drives in a square and then a diagonal; must be repeatedly called from a loop
-    void SquareAndDiagonalTest () {
-        UpdateHardwareInput ();
-
-        float power = 25; // note: power was at -35 (or maybe -25) for that speed video I recorded
-        float timeBetween = 0.5;
-        Vector2 direction;
-
-        switch (state) {
-            case 0:
-                timeSinceAction = TimeNow ();
-                break;
-            case 1:
-                veh->Move (Vector.right, power);
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 2;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 2:
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 3;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 3:
-                veh->Move (Vector.up, power);
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 4;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 4:
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 5;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 5:
-                veh->Move (Vector.left, power);
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 6;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 6:
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 7;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 7:
-                veh->Move (Vector.down, power);
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 8;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 8:
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 9;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 9:
-                direction = Vector2 (-1, -1);
-                direction = direction.getUnitVector ();
-                veh->Move (direction, power);
-                if (TimeNow() - timeSinceAction > timeBetween * 1.05) {
-                    state = 10;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 10:
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 11;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 11:
-                direction = Vector2 (1, 1);
-                direction = direction.getUnitVector ();
-                veh->Move (direction, power);
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 12;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            case 12:
-                veh->Stop ();
-                if (TimeNow() - timeSinceAction > timeBetween) {
-                    state = 0;
-                    timeSinceAction = TimeNow ();
-                }
-                break;
-            default:
-                break;
-        }
-        UpdateHardwareOutput ();
-    }
+    
     // resets the navigator object (resets state variables and that sort of thing)
     void Reset () {
-        state = 0;
         SM.Reset ();
-        timeSinceAction = TimeNow ();
     }
     // starts the navigation procedure; does this by setting state = 1
     void Start () {
-        state = 1;
         SM.Start ();
     }
     Vectors Vector;
@@ -1364,8 +1205,18 @@ private:
 };
 
 
-/************************************************ MISCELLANEOUS CLASSES ************************************************/
+
+
 /************************************************************************ FUNCTION DECLERATIONS ************************************************************************/
+
+
+/************************ MISC FUNCTIONS ************************/
+
+// ...
+
+
+
+
 /************************************************************************ GLOBAL VARIABLE DECLERATIONS ************************************************************************/
 
 
@@ -1390,7 +1241,7 @@ Vectors Vector;
 
 /************************ MISCELLANEOUS VARIABLES ************************/
 
-// define bump identifiers
+// ...
 
 
 /************************ GUI VARIABLES ************************/
@@ -1412,6 +1263,7 @@ Button actionButt1;
 #define WALLWALLCOLOR           0x8a715c     // 0x708090 // 0x418E88 // 0x9b704b // 0x8a715c
 #define SHADOWCOLOR             0x000000
 #define SHADOW_ALPHA            0.5          // between 0 and 1
+
 
 
 
@@ -1631,10 +1483,8 @@ void UpdateHardwareOutput () {
     UpdateServos ();
 }
 void PrintMotorPercents () {
-    /*
     cout << "Motor 1: " << vehicle.wheels[0].activePercent << "%" << endl;
     cout << "Motor 2: " << vehicle.wheels[1].activePercent << "%" << endl;
     cout << "Motor 3: " << vehicle.wheels[2].activePercent << "%" << endl;
-    */
 }
 
