@@ -1179,6 +1179,7 @@ public:
         StateVFF move_up_ramp_real_quick (this, & Navigator :: MoveDuration, Vector.E, 65, 1.0); // direction, power, duration
         StateFF initial_turn (this, & Navigator :: TurnCW, 135, 35); // degrees, power
         StateVoid do_DDR_stuff (this, & Navigator :: DoDDR);
+        StateVFF move_duration_DE (this, & Navigator :: MoveDuration, Vector.DE, 35, 1.0); // direction, power, duration
         
         
         /************************ ADD REFERENCES of all of the state objects to the temporary state machine ************************/
@@ -1189,7 +1190,7 @@ public:
         
         TSM.Add (  & initial_turn   );
         TSM.Add (  & stop   );
-        TSM.Add (  & move_duration   );
+        TSM.Add (  & move_duration_DE   );
         TSM.Add (  & stop   );
         TSM.Add (  & turn_clockwise   );
         TSM.Add (  & stop   );
