@@ -562,6 +562,7 @@ private:
 class Navigator;
 
 
+// this is the base class for the states used in the state machine object
 class State {
 public:
     State () {
@@ -569,16 +570,92 @@ public:
     }
     
     // perform the state's actions
-    virtual const void Go () {
+    virtual const bool Go () {
         cout << "Ruh roh" << endl;
+        return false;
+    }
+    // int testValue;
+private:
+};
+
+
+
+// this object extends the State base class
+class StateVoid : public State {
+public:
+    StateVoid (Navigator *navPtr, bool (Navigator::*funcPtr) ()) {
+        nav = navPtr;
+        functionPtr = funcPtr;
+    }
+    StateVoid () {
+        
+    }
+    Navigator *nav;
+    bool (Navigator::*functionPtr) (); // declares a pointer to a function
+    
+    // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
+    virtual const bool Go () {
+        return (nav->*functionPtr) (); // calls the function in which functionPtr is pointing to
     }
 private:
 };
 
 
+// this object extends the State base class
+class StateF : public State {
+public:
+    StateF (Navigator *navPtr, bool (Navigator::*funcPtr) (float), float flt0) {
+        nav = navPtr;
+        functionPtr = funcPtr;
+        f0 = flt0;
+    }
+    StateF () {
+        
+    }
+    Navigator *nav;
+    bool (Navigator::*functionPtr) (float); // declares a pointer to a function
+    float f0;
+    
+    // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
+    virtual const bool Go () {
+        return (nav->*functionPtr) (f0); // calls the function in which functionPtr is pointing to
+    }
+private:
+};
+
+
+// this object extends the State base class
+class StateVFF : public State {
+public:
+    StateVFF (Navigator *navPtr, bool (Navigator::*funcPtr) (Vector2, float, float), Vector2 vctr, float flt0, float flt1) {
+        nav = navPtr;
+        functionPtr = funcPtr;
+        v0 = vctr;
+        f0 = flt0;
+        f1 = flt1;
+    }
+    StateVFF () {
+        
+    }
+    Navigator *nav;
+    bool (Navigator::*functionPtr) (Vector2, float, float); // declares a pointer to a function
+    Vector2 v0;
+    float f0;
+    float f1;
+    
+    // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
+    virtual const bool Go () {
+        return (nav->*functionPtr) (v0, f0, f1); // calls the function in which functionPtr is pointing to
+    }
+private:
+};
+
+
+/*
+// this object extends the State base class
 class MoveDurationState : public State {
 public:
-    MoveDurationState (Navigator *navPtr, void (Navigator::*fctPtr) (Vector2, float, float), Vector2 dir, float pwr, float dur) {
+    MoveDurationState (Navigator *navPtr, bool (Navigator::*fctPtr) (Vector2, float, float), Vector2 dir, float pwr, float dur) {
         nav = navPtr;
         functionPtr = fctPtr;
         direction = dir;
@@ -589,61 +666,83 @@ public:
         
     }
     Navigator *nav;
-    void (Navigator::*functionPtr) (Vector2, float, float); // declares a pointer to a function
+    bool (Navigator::*functionPtr) (Vector2, float, float); // declares a pointer to a function
     Vector2 direction;
     float power;
     float duration;
     
-    // perform the state's actions
-    virtual const void Go () {
-        (nav->*functionPtr) (direction, power, duration); // calls the function in which functionPtr is pointing to
+    // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
+    virtual const bool Go () {
+        return (nav->*functionPtr) (direction, power, duration); // calls the function in which functionPtr is pointing to
     }
 private:
 };
+*/
 
 
 class StateMachine {
 public:
+    StateMachine (float timeWhen, int presentState) { // create a state machine while also setting whether the SM has started and what its current state is
+        currentState = presentState;
+        length = 0;
+        timeWhenStateChanged = timeWhen;
+    }
+    StateMachine (StateMachine *SM) { // copy constructor
+        currentState = SM->currentState;
+        length = SM->length;
+        timeWhenStateChanged = SM->timeWhenStateChanged;
+        // should techinically also deep copy the states array but I'm not messing with that
+    }
     StateMachine () {
-        // initialize event data vector
-        started = false;
         currentState = 0;
         length = 0;
+        timeWhenStateChanged = TimeNow ();
     }
-    vector<State> states; // state data vector
-    vector<State*> statePtrs; // pointer state data vector
+    vector<State*> states; // state data vector
     int length; // the length of the state data vector
-    bool started;
     int currentState;
+    float timeWhenStateChanged;
     
     // adds an state/event/task
-    void Add (State newState) { // takes an State struct as an argument
+    void Add (State *newState) { // takes an State struct as an argument
         // newState->Go();
-        states.resize (++length); // resize data vector // this is pretty inefficient but oh well
-        statePtrs.resize (++length);
         states.push_back (newState); // add the given state to the state data vector
-        statePtrs.push_back (&states [length-1]);
+        states.resize (++length); // resize data vector // this is pretty inefficient but oh well
     }
     // goes to the next state
     void Next () {
-        currentState++; // increment the current state of the state machine
+        /*
+        if (currentState < length) {
+            currentState++; // increment the current state of the state machine
+        } else {
+            currentState = 0;
+        }
+        */
+        // simultanesouly increment the current state of the state machine while checking if the current state was the final state
+        if (++currentState >= length) {
+            currentState = 0; // if the state previous state was the final state, then restart the state machine
+        }
+        timeWhenStateChanged = TimeNow ();
     }
     
     void Update () {
-        if (started) {
+        //if (started) { // you could probably work around having to have this check but oh well
             // call event data function until it returns true (the end condition is met)
             // (note that if it becomes too difficult to get a returned value from this or whatever, I can just take care of this inside the methods or achieve the effect indirectly; actually I probably should do this this way, at least to start; all I really want this object / statemachine to do is call a list of functions with parameters depending on a state index)
             // if the end condition is met, then increment the current state and ~note the time in which the state ended
             // states [currentState]->Go ();
-            statePtrs [currentState]->Go ();
-        }
+            cout << "Go! " << currentState << endl;
+            bool stateFinished = states [currentState]->Go ();
+            if (stateFinished) {
+                Next ();
+            }
+        //}
     }
     void Start () {
-        started = true;
         currentState = 1;
+        timeWhenStateChanged = TimeNow ();
     }
     void Reset () {
-        started = false;
         currentState = 0;
     }
 private:
@@ -673,6 +772,7 @@ public:
     }
     Vehicle *veh;
     StateMachine SM;
+    State states [99]; // static reference to all the states used in the state machine (necessary to prevent memory leaks)
     int state;
     int actionToPerform;
     float timeSinceAction;
@@ -705,12 +805,9 @@ public:
 
     /************************ TASK FUNCTIONS ************************/
 
-    void StopVehicle (float stopTime) {
+    bool StopVehicle (float stopTime) {
         veh->Stop ();
-        if (TimeNow() - timeSinceAction > stopTime) {
-            state++;
-            timeSinceAction = TimeNow ();
-        }
+        return TestEndCondition (TimeNow() - SM.timeWhenStateChanged > stopTime);
     }
 
     void TurnCW (float degrees, float power) {
@@ -739,9 +836,9 @@ public:
         TestEndCondition (TurnDegrees (-maxDegrees, -power) || !veh->bumps [bumpID].Value());
     }
 
-    void MoveDuration (Vector2 direction, float power, float duration) {
+    bool MoveDuration (Vector2 direction, float power, float duration) {
         veh->Move (direction, power);
-        TestEndCondition (TimeNow() - timeSinceAction > duration);
+        return TestEndCondition (TimeNow() - SM.timeWhenStateChanged > duration);
     }
 
     /* Maintains being flush with a wall while moving in a direction.
@@ -806,8 +903,8 @@ public:
         TestEndCondition (TimeNow() - timeSinceAction > waitTime);
     }
 
-    void WaitForLight () {
-        TestEndCondition (veh->cds.isLight());
+    bool WaitForLight () {
+        return TestEndCondition (veh->cds.isLight());
     }
 
     // (returns the given condition just so that the condition doesn't have to be tested twice)
@@ -852,17 +949,64 @@ public:
     // update the navigator; must be called repeatedly for everything to work properly
     void Update () {
         UpdateHardwareInput ();
-        SM.Update ();
+        // SM.Update ();
+        InitStateMachineTest (); // reinitializes the statemachine and calls its update function
         UpdateHardwareOutput ();
     }
     
     // initializes the series of actions required for performance
     void InitStateMachineTest () {
+        // int num = 0;
         // MoveDurationState *moveDuration = new MoveDurationState (this, &Navigator::MoveDuration, Vector.EF, 35, 1.0);
-        MoveDurationState moveDuration (this, &Navigator::MoveDuration, Vector.EF, 35, 1.0);
+        // MoveDurationState moveDuration (this, &Navigator::MoveDuration, Vector.EF, 35, 1.0);
+        // states = {  moveDuration  };
+        // states [num++] = MoveDurationState (this, &Navigator::MoveDuration, Vector.EF, 35, 1.0);
+        //- states [num++] = moveDuration;
 
+        // int anArray [] = {1, 2, 3, 4};
         // ope this is actually making a bunch of memory leaks
-        SM.Add (  moveDuration  );
+        // SM.Add (  &moveDuration  );
+        //- SM.Add (  &(states [0])  );
+    
+        /* 
+         * This is set up so that all the information except the state data itself is stored in the SM statemachine.
+         * This includes the currentState, whether the state machine has started, and time variables.
+         * This non-state data is transfered into a temporary state machine (TSM), in which all the real state data is then manually added to it.
+         * This temporary state machine is then updated (which calls the function associated with the current state).]
+         * The non-state data in the tempory state machine is then transfered back into SM, so any state transition information is noted.
+         * This is all really inefficent, but it is the easiest way to solve a memory leak issue I was having.
+         */
+        // StateMachine TSM = StateMachine (SM); // transfer non-state data into a temporary state machine
+        StateMachine TSM = StateMachine (SM.timeWhenStateChanged, SM.currentState);
+        
+        // note that the (& Navigator :: FunctionName) syntax is used to create a pointer to a function existing within a navigator object; the spaces are for style
+        State doNothing = State (); // this syntax is different than the other because the compiler would otherwise think this is a method declaration (other than that, the syntax is essentially equivalent)
+        StateVoid waitForLight (this, & Navigator :: WaitForLight);
+        StateVFF moveDuration (this, & Navigator :: MoveDuration, Vector.EF, 35, 1.0);
+        StateF stop (this, & Navigator :: StopVehicle, 1.0);
+
+        // note you have to start this new state machine using the GUI button (or at least that's how it's currently set up)
+        TSM.Add (  & doNothing   ); // the do nothing state should always be the first state
+        TSM.Add (  & waitForLight   );
+        TSM.Add (  & moveDuration   );
+        TSM.Add (  & stop   );
+        TSM.Add (  & moveDuration   );
+        TSM.Add (  & stop   );
+        
+        // TSM.Start ();
+        TSM.Update ();
+        
+        SM = StateMachine (TSM.timeWhenStateChanged, TSM.currentState); // transfer tempary non-state data into the real state machine
+        
+        /*
+        StateMachine SMTest = StateMachine ();
+        MoveDurationState moveDuration (this, &Navigator::MoveDuration, Vector.EF, 35, 1.0);
+        
+        SMTest.Add (  &moveDuration  );
+        
+        SMTest.Start ();
+        SMTest.Update ();
+        */
     }
     // performs the series of actions required for performance test one; must be repeatedly called from a loop; is draft 2 (this was the one used in the actual performance test)
     void PerformanceTestOneD2 () {
@@ -1493,3 +1637,4 @@ void PrintMotorPercents () {
     cout << "Motor 3: " << vehicle.wheels[2].activePercent << "%" << endl;
     */
 }
+
