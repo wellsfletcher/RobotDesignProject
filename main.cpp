@@ -1,4 +1,4 @@
-#define IS_SIMULATION 1 // also have to define this variable in Simulation.hpp and Classes.hpp
+#define IS_SIMULATION 0 // also have to define this variable in Simulation.hpp and Classes.hpp
 #if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
 
@@ -1180,7 +1180,8 @@ public:
         StateFF initial_turn (this, & Navigator :: TurnCW, 135, 35); // degrees, power
         StateVoid do_DDR_stuff (this, & Navigator :: DoDDR);
         StateVFF move_duration_DE (this, & Navigator :: MoveDuration, Vector.DE, 35, 1.0); // direction, power, duration
-        
+        StateVFF initial_move (this, & Navigator :: MoveDuration, Vector.F, 35, 0.5); // direction, power, duration   
+     
         
         /************************ ADD REFERENCES of all of the state objects to the temporary state machine ************************/
         
@@ -1188,13 +1189,14 @@ public:
         TSM.Add (  & do_nothing   ); // the do nothing state should always be the first state (state [0])
         TSM.Add (  & wait_for_Light   );
         
+        TSM.Add (  & initial_move   ); 
         TSM.Add (  & initial_turn   );
         TSM.Add (  & stop   );
         TSM.Add (  & move_duration_DE   );
         TSM.Add (  & stop   );
-        TSM.Add (  & turn_clockwise   );
+        //TSM.Add (  & turn_clockwise   );
         TSM.Add (  & stop   );
-        TSM.Add (  & do_DDR_stuff   );
+        //TSM.Add (  & do_DDR_stuff   );
         
         TSM.Add (  & stop_at_the_end   ); // probably always a good idea to include a stop function at the end
         
