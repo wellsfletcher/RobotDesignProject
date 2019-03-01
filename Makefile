@@ -1,4 +1,4 @@
-TARGET = RobotDesignProject
+TARGET = IamStillSad
 
 GITBINARY := git
 FEHURL := google.com
