@@ -845,7 +845,7 @@ public:
         timeWhenStateChanged = 0;
     }
     // vector<State*> states; // state data vector
-    State *states [20]; // was 64
+    State *states [64]; // was 64
     int length; // the length of the state data vector
     int currentState;
     float timeWhenStateChanged;
@@ -901,6 +901,7 @@ public:
         rightTurnLimitReached = false;
 
         minLightValue = 9999999;
+        isBlue = false;
     }
     Navigator () {
 
@@ -1054,15 +1055,16 @@ public:
             veh->Move (Vector.DE, 35);
             complete = (TimeNow()-SM.timeWhenStateChanged > .85);
         } else {
-            //error
+            complete = (TimeNow()-SM.timeWhenStateChanged > 2.0);// time-out error
         }
 
         return complete;
     }
 
+    bool isBlue;
     bool MoveDurationBlueShift() {
         bool complete = false;
-        bool isBlue=false;
+        // bool isBlue=false;
 
         //if((0.0<=cds0.Value())&&(cds0.Value<=0.7)){
         if(veh->cds.isRedLight()){
@@ -1073,7 +1075,10 @@ public:
             veh->Move (Vector.DE, 35);
             complete=(TimeNow()-SM.timeWhenStateChanged > .7);
         } else {
-            //error
+            complete = (TimeNow()-SM.timeWhenStateChanged > 2.0);// time-out error
+        }
+        if (complete) {
+            isBlue = false;
         }
         return complete;
     }
@@ -1234,12 +1239,31 @@ public:
         StateVoid do_DDR_stuff (this, & Navigator :: DoDDR);
         StateVFF move_duration_DE (this, & Navigator :: MoveDuration, Vector.DE, 35, 2.9); // direction, power, duration
         StateVFF initial_move (this, & Navigator :: MoveDuration, Vector.F, 35, 0.1); // direction, power, duration
-        StateVFF move_button_F (this, & Navigator :: MoveDuration, Vector.F, 35, 1.2); // direction, power, duration
+        StateVFF move_button_F (this, & Navigator :: MoveDuration, Vector.F, 35, 1.05); // direction, power, duration
         StateVFF move_C_after (this, & Navigator :: MoveDuration, Vector.C, 35, 1.0); // direction, power, duration
         StateF hold_button (this, & Navigator :: StopVehicle, 5.0); // stopTime
         StateVFF move_blue_shift (this, & Navigator :: MoveDuration, Vector.DE, 35, 1.0); // direction, power, duration
         StateVoid blue_shift_test(this, & Navigator :: MoveDurationBlueShift);
         StateFF alignToDDR (this, & Navigator :: TurnCCW, 10, 35); // degrees, power
+
+        // rotate to align with right wall
+        StateFF align_to_right_wall (this, & Navigator :: TurnCCW, 90, 35); // degrees, power
+        // move until touches right wall
+        StateVFI move_F_bump_FX (this, & Navigator :: MoveUntilBump, Vector.F, 35, F1); // direction, power, bumpID
+        // grind up ramp (for duration) (in a slight diagonal direction)
+        StateVFF grind_up_ramp (this, & Navigator :: MoveDuration, Vector.E, 75, 2.0); // direction, power, duration // Vector.getAverageUnitVector2(Vector.getAverageUnitVector2(Vector.E, Vector.DE), Vector.DE))
+        // move until the front bump switch activates
+        StateVFI move_E_bump_D1 (this, & Navigator :: MoveUntilBump, Vector.E, 20, D1); // direction, power, bumpID
+        // move back a bit
+        StateVFF move_back_from_foosball (this, & Navigator :: MoveDuration, Vector.AB, 35, 0.1); // direction, power, duration
+        // move left a little
+        StateVFF move_to_align_to_foosball (this, & Navigator :: MoveDuration, Vector.C, 35, 0.875); // direction, power, duration // straight at 0.7
+        // rotate a little to align to foosball
+        StateFF turn_to_align_to_foosball (this, & Navigator :: TurnCW, 30, 35); // degrees, power
+        // move forward towards the foolsball disc to touch them
+        StateVFF touch_foosball (this, & Navigator :: MoveDuration, Vector.D, 35, 0.16); // direction, power, bumpID
+        // lower servo
+        StateFF lower_servo (this, & Navigator :: SetServoAngle, 40-5, 1.0); // degrees, waitTime
 
 
 
@@ -1270,17 +1294,36 @@ public:
         TSM.Add ( & hold_button );
         TSM.Add ( & stop );
 
-
-
-
-
-
-
         TSM.Add (  & move_C_after );
 
         //TSM.Add (  & do_DDR_stuff   );
 
         TSM.Add ( & stop );
+
+        // rotate to align with right wall
+        TSM.Add ( & align_to_right_wall );
+        TSM.Add ( & stop );
+        // move to wall using bump
+        TSM.Add ( & move_F_bump_FX );
+        // grind up ramp (for duration) (in a slight diagonal direction)
+        TSM.Add ( & grind_up_ramp );
+        // move until the front bump switch activates
+        TSM.Add ( & move_E_bump_D1 );
+        TSM.Add ( & stop );
+        // move back a bit
+        TSM.Add ( & move_back_from_foosball );
+        TSM.Add ( & stop );
+        // move left a little
+        TSM.Add ( & move_to_align_to_foosball );
+        TSM.Add ( & stop );
+        // rotate
+        TSM.Add ( & turn_to_align_to_foosball );
+        TSM.Add ( & stop );
+        // move forward towards the foolsball disc to touch them
+        TSM.Add ( & touch_foosball );
+        TSM.Add ( & stop );
+        TSM.Add ( & lower_servo );
+
 
         TSM.Add (  & stop_at_the_end   ); // probably always a good idea to include a stop function at the end
 
@@ -1571,7 +1614,7 @@ void mainLoop () {
     touch = Vector2 (touch.x, -touch.y); // standardize the touch coordinates so they're effectively in the fourth quadrant
 
     if (actionButt0.IsBeingPressed (touch)) { // checks if the button was pressed and updates the state of the button
-        vehicle.servo.SetDegree (15); // sets the servo's angle to 15 degrees
+        vehicle.servo.SetDegree (30); // sets the servo's angle to 15 degrees
     }
     if (actionButt1.IsBeingPressed (touch)) { // checks if the button was pressed and updates the state of the button
         vehicle.servo.SetDegree (100); // sets the servo's angle to 100 degrees

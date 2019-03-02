@@ -261,7 +261,7 @@ public:
         EF.Rotate (degreesForAlignment);
         FA.Rotate (degreesForAlignment);
     }
-private:
+//private:
     Vector2 getAverageUnitVector2 (Vector2 a, Vector2 b) {
         Vector2 average = Vector2 (a.x + b.x, a.y + b.y);
         average = average.getUnitVector ();
@@ -525,7 +525,7 @@ public:
     }
     bool isBlueLight (float testValue) {
         float lowerBound = 0.55;
-        float upperBound = 1.55;
+        float upperBound = 1.7; // 1.55
         bool result = false;
 
         if (testValue >= lowerBound && testValue < upperBound) {

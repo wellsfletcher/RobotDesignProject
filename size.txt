@@ -1,2 +1,2 @@
    text	   data	    bss	    dec	    hex	filename
-  82964	   3448	  13172	  99584	  18500	../IamStillSad.elf
+  84772	   3448	  13348	 101568	  18cc0	../IamStillSad.elf
