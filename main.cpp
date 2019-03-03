@@ -1,4 +1,4 @@
-#define IS_SIMULATION 0 // also have to define this variable in Simulation.hpp and Classes.hpp
+#define IS_SIMULATION 1 // also have to define this variable in Simulation.hpp and Classes.hpp
 #if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
 
@@ -266,6 +266,7 @@ using namespace std;
 
 
 void DrawBox (Box box);
+void DrawBoxBorder (Box box);
 void DrawEdge (Edge edge);
 void DrawCircle (Circle circle);
 void UpdateMotors ();
@@ -501,7 +502,7 @@ public:
             Vector2 global = Vector2 (local.x + vehicle.pos.x, local.y + vehicle.pos.y);
 
             // make the bump switches become longer when activated
-            float scalar = 5.0;
+            float scalar = 8.0;
             if (!vehicle.bumps [k].Value ()) {
                 scalar *= 3.0;
             }
@@ -580,9 +581,9 @@ class Navigator;
 class State {
 public:
     State () {
-        
+
     }
-    
+
     // perform the state's actions
     virtual const bool Go () {
         // cout << "Ruh roh" << endl;
@@ -601,11 +602,11 @@ public:
         functionPtr = funcPtr;
     }
     StateVoid () {
-        
+
     }
     Navigator *nav;
     bool (Navigator::*functionPtr) (); // declares a pointer to a function
-    
+
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
     virtual const bool Go () {
         return (nav->*functionPtr) (); // calls the function in which functionPtr is pointing to
@@ -621,27 +622,27 @@ public:
         nav = navPtr;
         functionPtr = funcPtr;
         v0 = vctr;
-        
+
         f0 = flt0;
         f1 = flt1;
-        
+
         i0 = int0;
         i1 = int1;
     }
     StateVFFII () {
-        
+
     }
     Navigator *nav;
     bool (Navigator::*functionPtr) (Vector2, float, float, int, int); // declares a pointer to a function
-    
+
     Vector2 v0;
-    
+
     float f0;
     float f1;
-    
+
     int i0;
     int i1;
-    
+
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
     virtual const bool Go () {
         return (nav->*functionPtr) (v0, f0, f1, i0, i1); // calls the function in which functionPtr is pointing to
@@ -657,25 +658,25 @@ public:
         nav = navPtr;
         functionPtr = funcPtr;
         v0 = vctr;
-        
+
         f0 = flt0;
         f1 = flt1;
-        
+
         i0 = int0;
     }
     StateVFFI () {
-        
+
     }
     Navigator *nav;
     bool (Navigator::*functionPtr) (Vector2, float, float, int); // declares a pointer to a function
-    
+
     Vector2 v0;
-    
+
     float f0;
     float f1;
-    
+
     int i0;
-    
+
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
     virtual const bool Go () {
         return (nav->*functionPtr) (v0, f0, f1, i0); // calls the function in which functionPtr is pointing to
@@ -695,14 +696,14 @@ public:
         f1 = flt1;
     }
     StateVFF () {
-        
+
     }
     Navigator *nav;
     bool (Navigator::*functionPtr) (Vector2, float, float); // declares a pointer to a function
     Vector2 v0;
     float f0;
     float f1;
-    
+
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
     virtual const bool Go () {
         return (nav->*functionPtr) (v0, f0, f1); // calls the function in which functionPtr is pointing to
@@ -718,23 +719,23 @@ public:
         nav = navPtr;
         functionPtr = funcPtr;
         v0 = vctr;
-        
+
         f0 = flt0;
-        
+
         i0 = int0;
     }
     StateVFI () {
-        
+
     }
     Navigator *nav;
     bool (Navigator::*functionPtr) (Vector2, float, int); // declares a pointer to a function
-    
+
     Vector2 v0;
-    
+
     float f0;
-    
+
     int i0;
-    
+
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
     virtual const bool Go () {
         return (nav->*functionPtr) (v0, f0, i0); // calls the function in which functionPtr is pointing to
@@ -749,23 +750,23 @@ public:
     StateFFI (Navigator *navPtr, bool (Navigator::*funcPtr) (float, float, int), float flt0, float flt1, int int0) {
         nav = navPtr;
         functionPtr = funcPtr;
-        
+
         f0 = flt0;
         f1 = flt1;
-        
+
         i0 = int0;
     }
     StateFFI () {
-        
+
     }
     Navigator *nav;
     bool (Navigator::*functionPtr) (float, float, int); // declares a pointer to a function
-    
+
     float f0;
     float f1;
-    
+
     int i0;
-    
+
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
     virtual const bool Go () {
         return (nav->*functionPtr) (f0, f1, i0); // calls the function in which functionPtr is pointing to
@@ -785,14 +786,14 @@ public:
         f1 = flt1;
     }
     StateFF () {
-        
+
     }
     Navigator *nav;
     bool (Navigator::*functionPtr) (float, float); // declares a pointer to a function
-    
+
     float f0;
     float f1;
-    
+
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
     virtual const bool Go () {
         return (nav->*functionPtr) (f0, f1); // calls the function in which functionPtr is pointing to
@@ -810,12 +811,12 @@ public:
         f0 = flt0;
     }
     StateF () {
-        
+
     }
     Navigator *nav;
     bool (Navigator::*functionPtr) (float); // declares a pointer to a function
     float f0;
-    
+
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
     virtual const bool Go () {
         return (nav->*functionPtr) (f0); // calls the function in which functionPtr is pointing to
@@ -842,14 +843,14 @@ public:
     StateMachine () {
         currentState = 0;
         length = 0;
-        timeWhenStateChanged = TimeNow ();
+        timeWhenStateChanged = 0;
     }
     // vector<State*> states; // state data vector
-    State *states [64];
+    State *states [64]; // was 64
     int length; // the length of the state data vector
     int currentState;
     float timeWhenStateChanged;
-    
+
     // adds an state/event/task
     void Add (State *newState) { // takes an State struct as an argument
         // states.push_back (newState); // add the given state to the state data vector
@@ -864,7 +865,7 @@ public:
         }
         timeWhenStateChanged = TimeNow ();
     }
-    
+
     void Update () {
         // cout << "Go! " << currentState << endl;
         // call event data function until it returns true (the end condition is met)
@@ -896,9 +897,16 @@ public:
         timeWhenRotationStarted = 0;
         timeRequiredForRotation = 0;
         rotationDidNotJustStart = false;
+        
+        timeWhenMovementStarted = 0;
+        timeRequiredForMovement = 0;
+        movementDidNotJustStart = 0;
 
         leftTurnLimitReached = false;
         rightTurnLimitReached = false;
+
+        minLightValue = 9999999;
+        isBlue = false;
     }
     Navigator () {
 
@@ -909,6 +917,10 @@ public:
     float timeWhenRotationStarted;
     float timeRequiredForRotation;
     bool rotationDidNotJustStart;
+    
+    float timeWhenMovementStarted;
+    float timeRequiredForMovement;
+    bool movementDidNotJustStart;
 
     // turn a ceratin amount of degrees; must be called repeadetly from a loop; returns true once the turn is complete
     bool TurnDegrees (float degrees, float motorPercent) {
@@ -926,6 +938,27 @@ public:
             // cout << "elapsed t = " << TimeNow () - timeWhenRotationStarted << endl;
             rotationDidNotJustStart = false;
             veh->Turn (-motorPercent); // "remove" the turn from the motors
+            return true;
+        } else {
+            return false;
+        }
+    }
+    
+    // move a ceratin amount of inches; must be called repeadetly from a loop; returns true once the movement is complete
+    bool MoveDistance (Vector2 direction, float motorPercent, float distance) {
+        float VELOCITY_AT_50_POWER = 18; // in inches per second // 150
+        if (movementDidNotJustStart == false) {
+            veh->Move (direction, motorPercent);
+            float velocity = VELOCITY_AT_50_POWER * 2.0 * motorPercent / 100.0;
+            // timeRequiredForRotation = abs (degrees / angVel); // t = Ø / w; may remove abs in the future
+            timeRequiredForMovement = distance / velocity;
+            timeWhenMovementStarted = TimeNow ();
+            movementDidNotJustStart = true;
+        }
+        if (TimeNow () - timeWhenMovementStarted > timeRequiredForMovement) {
+            movementDidNotJustStart = false;
+            // veh->Turn (-motorPercent); // "remove" the turn from the motors
+            veh->Stop ();
             return true;
         } else {
             return false;
@@ -1021,9 +1054,63 @@ public:
      * @return true when the action is complete, false otherwise.
      */
     bool MoveDuration (Vector2 direction, float power, float duration) {
-        PrintMotorPercents ();
+        //PrintMotorPercents ();
         veh->Move (direction, power);
         return (TimeNow() - SM.timeWhenStateChanged > duration);
+    }
+
+    float minLightValue;
+    bool MoveToGetMinLightValue (Vector2 direction, float power, float duration) {
+        veh->Move (direction, power);
+        if (cds0.Value() < minLightValue) {
+            minLightValue = cds0.Value();
+        }
+        return (TimeNow() - SM.timeWhenStateChanged > duration);
+    }
+
+    void ResetMin () {
+        minLightValue = 99999;
+    }
+
+    bool MoveDurationBlueShiftUsingMin () {
+        bool complete = false;
+        bool isBlue = false;
+
+        //if((0.0<=cds0.Value())&&(cds0.Value<=0.7)){
+        if (veh->cds.isRedLight(minLightValue)) {
+            complete = true;
+        //} else if (((0.7<cds0.Value())&&(cds0.Value<=1.5))||isBlue) {
+        } else if (veh->cds.isBlueLight(minLightValue) || isBlue) {
+            isBlue = true;
+            veh->Move (Vector.DE, 35);
+            complete = (TimeNow()-SM.timeWhenStateChanged > .85);
+        } else {
+            complete = (TimeNow()-SM.timeWhenStateChanged > 2.0);// time-out error
+        }
+
+        return complete;
+    }
+
+    bool isBlue;
+    bool MoveDurationBlueShift() {
+        bool complete = false;
+        // bool isBlue=false;
+
+        //if((0.0<=cds0.Value())&&(cds0.Value<=0.7)){
+        if(veh->cds.isRedLight()){
+            complete=true;
+        //} else if (((0.7<cds0.Value())&&(cds0.Value<=1.5))||isBlue) {
+        }else if(veh->cds.isBlueLight()||isBlue){
+            isBlue=true;
+            veh->Move (Vector.DE, 35);
+            complete=(TimeNow()-SM.timeWhenStateChanged > .7);
+        } else {
+            complete = (TimeNow()-SM.timeWhenStateChanged > 2.0);// time-out error
+        }
+        if (complete) {
+            isBlue = false;
+        }
+        return complete;
     }
 
     /* Maintains being flush with a wall while moving in a direction.
@@ -1087,8 +1174,8 @@ public:
         veh->Move (direction, power);
         return !veh->bumps [bumpID].Value();
     }
-    
-    
+
+
     /*
      * Moves the vehicle in the given @direction with the given @power until the bump switch with index @bumpID is activated or until the @maxDuration is reached.
      * @return true when the action is complete, false otherwise.
@@ -1097,7 +1184,7 @@ public:
         veh->Move (direction, power);
         return !veh->bumps [bumpID].Value() || (TimeNow() - SM.timeWhenStateChanged > maxDuration);
     }
-    
+
 
     /*
      * Set the servos angle to @degrees, and waits for @waitTime in seconds until performing the next action.
@@ -1107,7 +1194,7 @@ public:
         veh->servo.SetDegree (degrees);
         return (TimeNow() - SM.timeWhenStateChanged > waitTime);
     }
-    
+
     /*
      * Does DDR stuff.
      */
@@ -1118,11 +1205,11 @@ public:
     bool WaitForBlueLight () {
         return veh->cds.isBlueLight();
     }
-    
+
     bool WaitForRedLight () {
         return veh->cds.isRedLight();
     }
-    
+
     /*
      * Wait for the CDS cell to detect that a light is on, before performing the next action.
      * @return true when the action is complete, false otherwise.
@@ -1135,13 +1222,12 @@ public:
     void Update () {
         UpdateHardwareInput ();
         // SM.Update ();
-        PerformanceTestTwoD1 (); // the current robot control procedure
+        Tester (); // the current robot control procedure
         UpdateHardwareOutput ();
     }
     
-    
     // perform all of the navigation procedures associated with state machine test
-    void PerformanceTestTwoD1 () {
+    void Tester () {
         /*
          * This is set up so that all the information except the state data itself is stored in the SM statemachine.
          * This includes the currentState and time when the state was last changed.
@@ -1161,6 +1247,7 @@ public:
         StateVoid wait_for_Light (this, & Navigator :: WaitForLight);
         
         StateVFF move_duration (this, & Navigator :: MoveDuration, Vector.EF, 35, 1.0); // direction, power, duration
+        StateVFF move_distance (this, & Navigator :: MoveDistance, Vector.EF, 35, 6.0); // direction, power, distance
         StateVFI move_bump (this, & Navigator :: MoveUntilBump, Vector.D, 35, D0); // direction, power, bumpID
         StateVFFI move_bump_duration (this, & Navigator :: MoveUntilBumpDuration, Vector.D, 35, 3.0, D1);  // direction, power, duration, bumpID
         
@@ -1175,40 +1262,31 @@ public:
         
         /************************ initialize OTHER state objects ************************/
         
-        StateF stop_at_the_end (this, & Navigator :: StopVehicle, 0.01); // stopTime
-        StateVFF move_up_ramp_real_quick (this, & Navigator :: MoveDuration, Vector.E, 65, 1.0); // direction, power, duration
-        StateFF initial_turn (this, & Navigator :: TurnCW, 135, 35); // degrees, power
-        StateVoid do_DDR_stuff (this, & Navigator :: DoDDR);
-        StateVFF move_duration_DE (this, & Navigator :: MoveDuration, Vector.DE, 35, 1.0); // direction, power, duration
-        StateVFF initial_move (this, & Navigator :: MoveDuration, Vector.F, 35, 0.5); // direction, power, duration   
-     
+        StateFF turnSome (this, & Navigator :: TurnCW, 90, 35); // degrees, power
+        StateVFF moveSome (this, & Navigator :: MoveDistance, Vector.EF, 50, 6.0); // direction, power, duration
+
         
         /************************ ADD REFERENCES of all of the state objects to the temporary state machine ************************/
         
         // note you have to start this new state machine using the GUI button (or at least that's how it's currently set up)
         TSM.Add (  & do_nothing   ); // the do nothing state should always be the first state (state [0])
-        TSM.Add (  & wait_for_Light   );
         
-        TSM.Add (  & initial_move   ); 
-        TSM.Add (  & initial_turn   );
+        TSM.Add (  & turnSome   );
         TSM.Add (  & stop   );
-        TSM.Add (  & move_duration_DE   );
-        TSM.Add (  & stop   );
-        //TSM.Add (  & turn_clockwise   );
-        TSM.Add (  & stop   );
-        //TSM.Add (  & do_DDR_stuff   );
+        TSM.Add (  & moveSome   );
         
-        TSM.Add (  & stop_at_the_end   ); // probably always a good idea to include a stop function at the end
+        TSM.Add (  & stop   ); // probably always a good idea to include a stop function at the end
         
         
         TSM.Update ();
         
         SM = StateMachine (TSM.timeWhenStateChanged, TSM.currentState); // transfer tempary non-state data into the real state machine
     }
-    
+
+
     // perform all of the navigation procedures associated with state machine test
-    void StateMachineTest () {
-        /* 
+    void PerformanceTestTwoD1 () {
+        /*
          * This is set up so that all the information except the state data itself is stored in the SM statemachine.
          * This includes the currentState and time when the state was last changed.
          * This non-state data is transfered into a temporary state machine (TSM), in which all the actual state data is then manually added.
@@ -1218,54 +1296,131 @@ public:
          */
 
         StateMachine TSM = StateMachine (SM.timeWhenStateChanged, SM.currentState); // transfer non-state data into a temporary state machine
-        
-        
+
+
         /************************ initialize SAMPLE state objects ************************/
-        
+
         // FYI the (& Navigator :: FunctionName) syntax is used to create a pointer to a function existing within a navigator object; the spaces are for style
         State do_nothing = State (); // this syntax is different than the other because the compiler would otherwise think this is a method declaration (other than that, the syntax is essentially equivalent)
         StateVoid wait_for_Light (this, & Navigator :: WaitForLight);
-        
+
         StateVFF move_duration (this, & Navigator :: MoveDuration, Vector.EF, 35, 1.0); // direction, power, duration
+        StateVFF move_distance (this, & Navigator :: MoveDistance, Vector.EF, 35, 6.0); // direction, power, distance
         StateVFI move_bump (this, & Navigator :: MoveUntilBump, Vector.D, 35, D0); // direction, power, bumpID
         StateVFFI move_bump_duration (this, & Navigator :: MoveUntilBumpDuration, Vector.D, 35, 3.0, D1);  // direction, power, duration, bumpID
-        
+
         StateFF turn_clockwise (this, & Navigator :: TurnCW, 45, 35); // degrees, power
         StateFFI turn_clockwise_bump (this, & Navigator :: TurnUntilBumpCW, 45, 35, D0); // maxDegrees, power, bumpID
-        
+
         StateVFFII move_while_flush (this, & Navigator :: MoveWhileFlushDuration, Vector.E, 35, 4.20, F0, F1); // direction, power, duration, bump0, bump1
         StateFF set_servo_angle (this, & Navigator :: SetServoAngle, 110, 1.0); // degrees, waitTime
-        
+
         StateF stop (this, & Navigator :: StopVehicle, 1.0); // stopTime
-        
+
+
 
         /************************ initialize OTHER state objects ************************/
-        
+
         StateF stop_at_the_end (this, & Navigator :: StopVehicle, 0.01); // stopTime
         StateVFF move_up_ramp_real_quick (this, & Navigator :: MoveDuration, Vector.E, 65, 1.0); // direction, power, duration
         StateFF initial_turn (this, & Navigator :: TurnCW, 135, 35); // degrees, power
+        StateVoid do_DDR_stuff (this, & Navigator :: DoDDR);
+        StateVFF move_duration_DE (this, & Navigator :: MoveDuration, Vector.DE, 35, 2.9); // direction, power, duration
+        StateVFF initial_move (this, & Navigator :: MoveDuration, Vector.F, 35, 0.1); // direction, power, duration
+        StateVFF move_button_F (this, & Navigator :: MoveDuration, Vector.F, 35, 1.05); // direction, power, duration
+        StateVFF move_C_after (this, & Navigator :: MoveDuration, Vector.C, 35, 1.0); // direction, power, duration
+        StateF hold_button (this, & Navigator :: StopVehicle, 5.0); // stopTime
+        StateVFF move_blue_shift (this, & Navigator :: MoveDuration, Vector.DE, 35, 1.0); // direction, power, duration
+        StateVoid blue_shift_test(this, & Navigator :: MoveDurationBlueShift);
+        StateFF alignToDDR (this, & Navigator :: TurnCCW, 10, 35); // degrees, power
 
-        
+        // rotate to align with right wall
+        StateFF align_to_right_wall (this, & Navigator :: TurnCCW, 90, 35); // degrees, power
+        // move until touches right wall
+        StateVFI move_F_bump_FX (this, & Navigator :: MoveUntilBump, Vector.F, 35, F1); // direction, power, bumpID
+        // grind up ramp (for duration) (in a slight diagonal direction)
+        StateVFF grind_up_ramp (this, & Navigator :: MoveDuration, Vector.E, 75, 2.0); // direction, power, duration // Vector.getAverageUnitVector2(Vector.getAverageUnitVector2(Vector.E, Vector.DE), Vector.DE))
+        // move until the front bump switch activates
+        StateVFI move_E_bump_D1 (this, & Navigator :: MoveUntilBump, Vector.E, 20, D1); // direction, power, bumpID
+        // move back a bit
+        StateVFF move_back_from_foosball (this, & Navigator :: MoveDuration, Vector.AB, 35, 0.1); // direction, power, duration
+        // move left a little
+        StateVFF move_to_align_to_foosball (this, & Navigator :: MoveDuration, Vector.C, 35, 0.875); // direction, power, duration // straight at 0.7
+        // rotate a little to align to foosball
+        StateFF turn_to_align_to_foosball (this, & Navigator :: TurnCW, 30, 35); // degrees, power
+        // move forward towards the foolsball disc to touch them
+        StateVFF touch_foosball (this, & Navigator :: MoveDuration, Vector.D, 35, 0.16); // direction, power, bumpID
+        // lower servo
+        StateFF lower_servo (this, & Navigator :: SetServoAngle, 40-5, 1.0); // degrees, waitTime
+
+
+
         /************************ ADD REFERENCES of all of the state objects to the temporary state machine ************************/
-        
+
         // note you have to start this new state machine using the GUI button (or at least that's how it's currently set up)
         TSM.Add (  & do_nothing   ); // the do nothing state should always be the first state (state [0])
         TSM.Add (  & wait_for_Light   );
-        
+
+        TSM.Add (  & initial_move   );
+        TSM.Add (  & stop   );
         TSM.Add (  & initial_turn   );
         TSM.Add (  & stop   );
-        TSM.Add (  & move_duration   );
+        TSM.Add (  & move_duration_DE   );
         TSM.Add (  & stop   );
-        TSM.Add (  & turn_clockwise   );
-        
+
+        //need something here to say blue or red. if blue execute blue shift, if not do nothing.
+        //TSM.Add( & move_blue_shift );
+        TSM.Add ( & blue_shift_test );
+
+        TSM.Add ( & stop );
+        TSM.Add ( & alignToDDR );
+
+        TSM.Add (  & move_button_F     );
+
+        //TSM.Add (  & turn_clockwise   );
+
+        TSM.Add ( & hold_button );
+        TSM.Add ( & stop );
+
+        TSM.Add (  & move_C_after );
+
+        //TSM.Add (  & do_DDR_stuff   );
+
+        TSM.Add ( & stop );
+
+        // rotate to align with right wall
+        TSM.Add ( & align_to_right_wall );
+        TSM.Add ( & stop );
+        // move to wall using bump
+        TSM.Add ( & move_F_bump_FX );
+        // grind up ramp (for duration) (in a slight diagonal direction)
+        TSM.Add ( & grind_up_ramp );
+        // move until the front bump switch activates
+        TSM.Add ( & move_E_bump_D1 );
+        TSM.Add ( & stop );
+        // move back a bit
+        TSM.Add ( & move_back_from_foosball );
+        TSM.Add ( & stop );
+        // move left a little
+        TSM.Add ( & move_to_align_to_foosball );
+        TSM.Add ( & stop );
+        // rotate
+        TSM.Add ( & turn_to_align_to_foosball );
+        TSM.Add ( & stop );
+        // move forward towards the foolsball disc to touch them
+        TSM.Add ( & touch_foosball );
+        TSM.Add ( & stop );
+        TSM.Add ( & lower_servo );
+
+
         TSM.Add (  & stop_at_the_end   ); // probably always a good idea to include a stop function at the end
-        
-        
+
+
         TSM.Update ();
-        
+
         SM = StateMachine (TSM.timeWhenStateChanged, TSM.currentState); // transfer tempary non-state data into the real state machine
     }
-    
+
     // resets the navigator object and stops the vehicle (resets state variables and that sort of thing)
     void Reset () {
         veh->Stop ();
@@ -1324,10 +1479,26 @@ Vectors Vector;
 // sample variables for button declaration
 #define BUTT_WIDTH 100
 #define BUTT_HEIGHT 30
+#define BUTT_Y_POS 45
+#define BUTT_X_POS 15
+#define BUTT_X_MARGIN 15
+#define BUTT_Y_MARGIN 10
 Button butt;
 Button cancelButt;
 Button actionButt0;
 Button actionButt1;
+
+StateIndicator indicatorCDS;
+StateIndicator indMisc0;
+StateIndicator indMisc1;
+StateIndicator indMotor0;
+StateIndicator indMotor1;
+StateIndicator indMotor2;
+// #define MOTOR_IND_X_POS 15
+#define MOTOR_IND_Y_POS 165 // 195 // 150
+#define MOTOR_IND_MARGIN 0
+#define MOTOR_IND_MAX_WIDTH 174/2 // 175
+#define MOTOR_IND_HEIGHT 11 // 11
 
 
 /************************ Just some sample colors ************************/
@@ -1349,24 +1520,40 @@ Button actionButt1;
 void Init () {
     // initialize some constants (that are only used in the initialization method)
     const double sqrt3 = pow (3.0, 0.5);
+    // int rightButtMargin = 15; // y-pos: -15, -60, -105, -150, -195
 
     // initialize buttons
     char charPtr [100];
     strcpy (charPtr, "START"); // use charPtr to set the text of the button
     // initialize the start button where its parameters are: a box containing the position of the top left corner of the button, the button's width, and the button's height; a pointer to the text contained within the button; and an integer containing the button's display type (what kind of button is drawn, which coded in the button class itself)
-    butt = Button (  Box ( Vector2 (30, -60), BUTT_WIDTH, BUTT_HEIGHT ), charPtr, 0  );
+    butt = Button (  Box ( Vector2 (BUTT_X_POS, -BUTT_Y_POS), BUTT_WIDTH, BUTT_HEIGHT ), charPtr, 0  ); // butt = Button (  Box ( Vector2 (30, -60), BUTT_WIDTH, BUTT_HEIGHT ), charPtr, 0  );
 
     strcpy (charPtr, "RESET"); // use charPtr to set the text of the button
     // initialize the reset button where its parameters are the same as the one's mentioned above
-    cancelButt = Button (  Box ( Vector2 (30, -105), BUTT_WIDTH, BUTT_HEIGHT ), charPtr, 0  );
+    cancelButt = Button (  Box ( Vector2 (BUTT_X_POS, -BUTT_Y_POS - BUTT_HEIGHT*1 - BUTT_Y_MARGIN*1), BUTT_WIDTH, BUTT_HEIGHT ), charPtr, 0  );
 
-    strcpy (charPtr, "ACT"); // use charPtr to set the text of the button
+    strcpy (charPtr, "DWN"); // use charPtr to set the text of the button
     // initialize the action buttons where their parameters are the same as the one's mentioned above
-    actionButt0 = Button (  Box ( Vector2 (30, -150), 45, BUTT_HEIGHT ), charPtr, 0  );
-    actionButt1 = Button (  Box ( Vector2 (85, -150), 45, BUTT_HEIGHT ), charPtr, 0  );
-
+    actionButt0 = Button (  Box ( Vector2 (BUTT_X_POS, -BUTT_Y_POS - BUTT_HEIGHT*2 - BUTT_Y_MARGIN*2), 45, BUTT_HEIGHT ), charPtr, 0  ); // -150
+    strcpy (charPtr, "UP");
+    actionButt1 = Button (  Box ( Vector2 (BUTT_X_POS + 55, -BUTT_Y_POS - BUTT_HEIGHT*2 - BUTT_Y_MARGIN*2), 45, BUTT_HEIGHT ), charPtr, 0  );
+    
+    strcpy (charPtr, "Value");
+    indicatorCDS = StateIndicator (  Box ( Vector2 (125, -BUTT_Y_POS), 65, BUTT_HEIGHT ), charPtr  ); // StateIndicator (  Box ( Vector2 (rightButtMargin, -15), 45, BUTT_HEIGHT ), charPtr  );
+    indMisc0 = StateIndicator (  Box ( Vector2 (125, -BUTT_Y_POS - BUTT_HEIGHT*1 - BUTT_Y_MARGIN*1), 65, BUTT_HEIGHT ), charPtr  );
+    indMisc1 = StateIndicator (  Box ( Vector2 (125, -BUTT_Y_POS - BUTT_HEIGHT*2 - BUTT_Y_MARGIN*2), 65, BUTT_HEIGHT ), charPtr  );
+    
+    // initialize the motor state indicators
+    strcpy (charPtr, "");
+    indMotor0 = StateIndicator (  Box ( Vector2 (BUTT_X_POS + MOTOR_IND_MAX_WIDTH, -MOTOR_IND_Y_POS), MOTOR_IND_MAX_WIDTH, MOTOR_IND_HEIGHT ), charPtr  );
+    indMotor1 = StateIndicator (  Box ( Vector2 (BUTT_X_POS + MOTOR_IND_MAX_WIDTH, -MOTOR_IND_Y_POS - MOTOR_IND_MARGIN*1 - MOTOR_IND_HEIGHT*1), MOTOR_IND_MAX_WIDTH, MOTOR_IND_HEIGHT ), charPtr  );
+    indMotor2 = StateIndicator (  Box ( Vector2 (BUTT_X_POS + MOTOR_IND_MAX_WIDTH, -MOTOR_IND_Y_POS - MOTOR_IND_MARGIN*2 - MOTOR_IND_HEIGHT*2), MOTOR_IND_MAX_WIDTH, MOTOR_IND_HEIGHT ), charPtr  );
+    indMotor0.UpdateColors (LIGHTGRAY);
+    indMotor1.UpdateColors (LIGHTGRAY);
+    indMotor2.UpdateColors (LIGHTGRAY);
+    
     // initialize the course object
-    course = Course (Vector2 (150, -32), .25);
+    course = Course (Vector2 (200, -15), 0.3); // course = Course (Vector2 (150, -32), .25);
 
     // (note that all position numbers are in inches, and relative to the top left corner of the course unless specified otherwise)
     int reverse = -1; // this variable is used to accomidate for the direction of the wheels being reversed on the actual robot
@@ -1431,7 +1618,7 @@ void Init () {
     // do stuff to fix the vehicles rotation to make it better match the orientation of the real robot
     navigator.Vector.AlignVehicleVectors (75);
     Vector.AlignVehicleVectors (75);
-    
+
     timeSinceLastFrameUpdate = TimeNow (); // initialize the time since the last screen/frame update
 }
 
@@ -1442,6 +1629,7 @@ void Init () {
 // like you do on the Proteus.
 void DrawEverything () {
     LCD.Clear (BACKGROUNDCOLOR); // clear the screen (for animation purposes)
+    char charPtr [100];
 
     // draw the course
     course.DrawCourse ();
@@ -1453,9 +1641,43 @@ void DrawEverything () {
         course.DrawVehicleVectors (simulatedVehicle);
     }
 
-    LCD.SetFontColor (TURQUOISE);
+    LCD.SetFontColor (RED);
     course.DrawRealVehicle (vehicle);
+    // LCD.SetFontColor (WHITE); // new
+    // course.DrawVehicleVectors (vehicle); // new
 
+    // draw CDS indicator
+    sprintf (charPtr, "%.2f", vehicle.cds.Value());
+    indicatorCDS.UpdateText (charPtr);
+    if (vehicle.cds.isRedLight()) {
+        indicatorCDS.UpdateColors (RED);
+    } else if (vehicle.cds.isBlueLight()) {
+        indicatorCDS.UpdateColors (BLUE);
+    } else if (vehicle.cds.isLight()) {
+        indicatorCDS.UpdateColors (GOLD);
+    } else {
+        indicatorCDS.UpdateColors (GRAY);
+    }
+    indicatorCDS.Draw ();
+
+    // draw misc indicators
+    sprintf (charPtr, "%i", navigator.SM.currentState);
+    indMisc0.UpdateText (charPtr);
+    indMisc0.Draw ();
+    // strcpy (charPtr, "Value");
+    // indMisc0.UpdateText (charPtr);
+    indMisc1.Draw ();
+
+    // draw motor indicators
+    indMotor0.box.width = MOTOR_IND_MAX_WIDTH * (vehicle.wheels [2].activePercent / 100); // 0
+    indMotor1.box.width = MOTOR_IND_MAX_WIDTH * (vehicle.wheels [0].activePercent / 100); // 1
+    indMotor2.box.width = MOTOR_IND_MAX_WIDTH * (vehicle.wheels [1].activePercent / 100); // 2
+    indMotor0.Draw ();
+    indMotor1.Draw ();
+    indMotor2.Draw ();
+    LCD.SetFontColor (WHITE);
+    DrawBoxBorder (  Box ( Vector2 (BUTT_X_POS, -MOTOR_IND_Y_POS), MOTOR_IND_MAX_WIDTH*2 + 1, MOTOR_IND_MARGIN*2 + MOTOR_IND_HEIGHT*3 )  );
+    
     // sample button drawing function implementation
     butt.DrawButton();
     cancelButt.DrawButton();
@@ -1474,7 +1696,7 @@ void mainLoop () {
     touch = Vector2 (touch.x, -touch.y); // standardize the touch coordinates so they're effectively in the fourth quadrant
 
     if (actionButt0.IsBeingPressed (touch)) { // checks if the button was pressed and updates the state of the button
-        vehicle.servo.SetDegree (15); // sets the servo's angle to 15 degrees
+        vehicle.servo.SetDegree (30); // sets the servo's angle to 15 degrees
     }
     if (actionButt1.IsBeingPressed (touch)) { // checks if the button was pressed and updates the state of the button
         vehicle.servo.SetDegree (100); // sets the servo's angle to 100 degrees
@@ -1508,6 +1730,10 @@ void mainLoop () {
 // draws a box with the given box object
 void DrawBox (Box box) {
     LCD.FillRectangle ( (int)(box.points[0].x), -(int)(box.points[0].y), box.width, box.height);
+}
+// draws a box's border with the given box object
+void DrawBoxBorder (Box box) {
+    LCD.DrawRectangle ( (int)(box.points[0].x), -(int)(box.points[0].y), box.width, box.height);
 }
 
 // draws given edge
@@ -1564,4 +1790,3 @@ void PrintMotorPercents () {
     cout << "Motor 3: " << vehicle.wheels[2].activePercent << "%" << endl;
     */
 }
-

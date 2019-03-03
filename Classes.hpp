@@ -1,4 +1,4 @@
-#define IS_SIMULATION 0
+#define IS_SIMULATION 1
 #if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
 
@@ -83,6 +83,9 @@
 #include <cmath>                        // standard definitions
 using namespace std;                    // make std accessible
 
+//float CF0 = 1.0; // correction factor for wheel 0 (the one in motor port 0)
+//float CF1 = 1.0; // correction factor for wheel 1 (the one in motor port 1)
+//float CF2 = 1.0; // correction factor for wheel 2 (the one in motor port 2)
 
 // universal classes
 
@@ -258,7 +261,7 @@ public:
         EF.Rotate (degreesForAlignment);
         FA.Rotate (degreesForAlignment);
     }
-private:
+//private:
     Vector2 getAverageUnitVector2 (Vector2 a, Vector2 b) {
         Vector2 average = Vector2 (a.x + b.x, a.y + b.y);
         average = average.getUnitVector ();
@@ -510,11 +513,22 @@ public:
 
     // for use with red color filter
     bool isBlueLight () {
-        float lowerBound = 1.6;
-        float upperBound = 2.5;
+        float lowerBound = 0.55;
+        float upperBound = 1.55; // should have been 1.7 ...s
         bool result = false;
 
         if (value >= lowerBound && value < upperBound) {
+            result = true;
+        }
+
+        return result;
+    }
+    bool isBlueLight (float testValue) { // note this is not for testing the current value of the CDS cell
+        float lowerBound = 0.55;
+        float upperBound = 1.7; // 1.55
+        bool result = false;
+
+        if (testValue >= lowerBound && testValue < upperBound) {
             result = true;
         }
 
@@ -524,10 +538,21 @@ public:
     // for use with red color filter
     bool isRedLight () {
         float lowerBound = 0;
-        float upperBound = 1.6;
+        float upperBound = 0.55;
         bool result = false;
 
         if (value >= lowerBound && value < upperBound) {
+            result = true;
+        }
+
+        return result;
+    }
+    bool isRedLight (float testValue) {  // note this is not for testing the current value of the CDS cell
+        float lowerBound = 0;
+        float upperBound = 0.55;
+        bool result = false;
+
+        if (testValue >= lowerBound && testValue < upperBound) {
             result = true;
         }
 
@@ -888,18 +913,25 @@ public:
 
     /*********************** navigation / movement functions *************************/
 
+
+    // this is the one that is used
     // turns counterclockwise; make sure the motor percent doesn't exceed 100; the vehicle's linear speed remains constant
     void Turn (float motorPercent) {
         float w0 = wheels [0].activePercent + motorPercent;
         float w1 = wheels [1].activePercent + motorPercent;
         float w2 = wheels [2].activePercent + motorPercent;
 
+        // multiply wheels by wheel correction factor
+        //w0 = w0 * CF0;
+        //w1 = w1 * CF1;
+        //w2 = w2 * CF2;
+
         wheels [0].SetPercent (w0);
         wheels [1].SetPercent (w1);
         wheels [2].SetPercent (w2);
     }
     // turns counterclockwise; the vehicle's linear speed does not remain constant, but the net motor output remains constant (I haven't finished implementing this method correctly yet)
-    void TurnNeutral (float motorPercent) {
+    void TurnNeutral (float motorPercent) { // not used
         float w0 = wheels [0].activePercent;
         float w1 = wheels [1].activePercent;
         float w2 = wheels [2].activePercent;
@@ -916,16 +948,22 @@ public:
         wheels [1].SetPercent (w1);
         wheels [2].SetPercent (w2);
     }
-    void Move (Vector2 motorPercent2) {
+    void Move (Vector2 motorPercent2) { // not used
         float sqrt3 = sqrt (3.0);
         float w0 = -0.5 * motorPercent2.x  -  (sqrt3/2.0) * motorPercent2.y;
         float w1 = motorPercent2.x;
         float w2 = -0.5 * motorPercent2.x  +  (sqrt3/2.0) * motorPercent2.y;
 
+        // multiply wheels by wheel correction factor
+       // w0 *= CF0;
+        //w1 *= CF1;
+        //w2 *= CF2;
+
         wheels [0].SetPercent (w0);
         wheels [1].SetPercent (w1);
         wheels [2].SetPercent (w2);
     }
+    // this is the one that is used
     // sets wheel speeds using a given unit vector direction and its magnitude (where its magnitude corresponds to the motor's power percent)
     void Move (Vector2 direction, float magnitude) {
         float sqrt3 = sqrt (3.0);
@@ -936,6 +974,11 @@ public:
         w0 *= magnitude;
         w1 *= magnitude;
         w2 *= magnitude;
+
+        // multiply wheels by wheel correction factor
+        //w0 *= CF0;
+        //w1 *= CF1;
+        //w2 *= CF2;
 
         wheels [0].SetPercent (w0);
         wheels [1].SetPercent (w1);
@@ -1177,5 +1220,71 @@ private:
                 LCD.SetBackgroundColor (BLACK);
                 break;
         }
+    }
+};
+
+
+class StateIndicator {
+public:
+    // creates a box object, taking as its parameters a box object representing its boundary, a character pointer to an array indicating the text
+    // to be displayed on the object, // and an an integer representing the type of indicator it is
+    StateIndicator (Box bounds, char txt[]) {
+        box = bounds;
+        strcpy (text, txt);
+        type = 0;
+        BUTT_MARGIN = 5;
+        
+        backgroundColor = ABYSS;
+        borderColor = WHITE;
+        textColor = WHITE;
+    }
+    StateIndicator () {
+        
+    }
+    Box box;
+    int type;
+    char text[100];
+    int BUTT_MARGIN;
+    static const int TEXT_HEIGHT = 10;
+    int backgroundColor;
+    int borderColor;
+    int textColor;
+    
+    // updates the text of the indicator
+    void UpdateText (char txt[]) {
+        strcpy (text, txt);
+    }
+    // updates the color of the indicator, given a background color, border color, and text color
+    void UpdateColors (int background, int border, int textC) {
+        backgroundColor = background;
+        borderColor = border;
+        textColor = textC;
+    }
+    // updates the color of the indicator, given a background color and border color
+    void UpdateColors (int background, int border) {
+        backgroundColor = background;
+        borderColor = border;
+    }
+    // updates the color of the indicator, given a background color
+    void UpdateColors (int background) {
+        backgroundColor = background;
+    }
+    // draws the indicator
+    void Draw () {
+        DrawIndicator (); // this method is kinda redundant
+    }
+private:
+    static const int ABYSS = 0x1a1a1a;
+    
+    // actually draws indicator
+    void DrawIndicator () {
+        // effectively erase the button before drawing the un-pressed version
+        LCD.SetFontColor (backgroundColor);
+        LCD.FillRectangle ( (int)(box.points[0].x), -(int)(box.points[0].y), box.width, box.height );
+        // draw the actual button
+        LCD.SetFontColor (textColor);
+        LCD.WriteAt ( text, (int)(box.points[0].x+BUTT_MARGIN), -(int)(box.points[0].y - box.height / 2.0 + TEXT_HEIGHT / 2.0) );
+        LCD.SetFontColor (borderColor);
+        LCD.DrawRectangle ( (int)(box.points[0].x), -(int)(box.points[0].y), box.width, box.height );
     }
 };
