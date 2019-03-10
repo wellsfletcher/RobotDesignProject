@@ -117,11 +117,13 @@ public:
 
         Vector2 netForce = Vector2 (0, 0);
         float netTorque = 0;
+        Vector2 netWheelPercentPower = Vector2 (0, 0);
 
         for (int k = 0; k < veh->wheelsLength; k++) {
             float motorPowerPercent = veh->wheels [k].activePercent;
             float wheelRadius = veh->wheels [k].radius;
             Vector2 wheelDirection = veh->wheels [k].dir;
+            netWheelPercentPower = Vector2 (netWheelPercentPower.x + wheelDirection.x * motorPowerPercent, netWheelPercentPower.y + wheelDirection.y * motorPowerPercent); // for clamping magnitude later
 
             // I found how to do this bit at https://www.precisionmicrodrives.com/content/reading-the-motor-constants-from-typical-performance-characteristics/
             // it seems sketchy to me
@@ -163,8 +165,9 @@ public:
         // netForce = Vector2 (.08, .08);
         // netTorque = 10;
 
+        float MAGIC_ANG_ACCEL_NUMBER = 10.0; // a fudged number to make the torque in the simulation more closely resemble reality
         Vector2 netAccel = Vector2 (netForce.x / MASS, netForce.y / MASS);
-        float angularAccel = netTorque / MoI;
+        float angularAccel = -netTorque / MoI * MAGIC_ANG_ACCEL_NUMBER;
 
         // convert back into correct units
         angularAccel = angularAccel * RADS_TO_DEGREES * deltaTime * deltaTime; // rad/s/s --> degrees/frame/frame
@@ -181,6 +184,15 @@ public:
 
         veh->ApplyAcceleration (netAccel);
         veh->ApplyAngularAcceleration (angularAccel);
+        
+        // clamp the magnitudes of the vehicles velocity and angular velocity (this currently makes acceleration irrelevent; will fix in the future)
+        float percentWheelPowerUsed = netWheelPercentPower.getMagnitude (); // may have to seperate the amount rotation contributes to this... idk
+        float maxVelocity = 0.02; // guess and check
+        veh->vel.ClampMagnitude (percentWheelPowerUsed * maxVelocity);
+        // cout << percentWheelPowerUsed << endl;
+        // cout << "vel: " << veh->vel.x << ", " << veh->vel.y << endl;
+        float maxAngularVelocity = 10;
+        //veh->angVel = (veh->angVel / abs (veh->angVel)) * maxAngularVelocity;
 
         veh->UpdatePosition ();
         veh->UpdateRotation ();

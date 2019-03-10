@@ -83,6 +83,9 @@
 #include <cmath>                        // standard definitions
 using namespace std;                    // make std accessible
 
+//float CF0 = 1.0; // correction factor for wheel 0 (the one in motor port 0)
+//float CF1 = 1.0; // correction factor for wheel 1 (the one in motor port 1)
+//float CF2 = 1.0; // correction factor for wheel 2 (the one in motor port 2)
 
 // universal classes
 
@@ -108,8 +111,22 @@ public:
     }
     // returns the vector converted into a unit vector
     Vector2 getUnitVector () {
-        float magnitude = getMagnitude();
-        return Vector2 (x / magnitude, y / magnitude);
+        float magnitude = getMagnitude ();
+        Vector2 unitVector;
+        
+        if (magnitude == 0) {
+            unitVector = Vector2 (0, 0);
+        } else {
+            unitVector = Vector2 (x / magnitude, y / magnitude);
+        }
+        
+        return unitVector;
+    }
+    // clamps the magnitude of the vector to maxLength
+    void ClampMagnitude (float maxLength) {
+        Vector2 unitVect = getUnitVector ();
+        x = unitVect.x * maxLength;
+        y = unitVect.y * maxLength;
     }
     // rotates vector counter-clockwise 90 degrees
     void RotateLeft () {
@@ -145,7 +162,7 @@ public:
         return angle;
     }
     // returns a vector equivalent for the given angle
-    Vector2 DegreesToVector2 (float degrees) {
+    static Vector2 DegreesToVector2 (float degrees) {
         Vector2 dir = Vector2 (1, tan (degrees * DEGREES_TO_RADS));
         return dir;
     }
@@ -194,12 +211,15 @@ public:
 
         const double sqrt3 = sqrt (3.0);
 
-        Bb = Vector2 (-sqrt3, 1);
-        C = Vector2 (0, 1);
-        D = Vector2 (sqrt3, 1);
-        E = Vector2 (sqrt3, -1);
-        F = Vector2 (0, -1);
-        Aa = Vector2 (-sqrt3, -1);
+        Bb = Vector2 (-sqrt3, 1).getUnitVector ();
+        C = Vector2 (0, 1).getUnitVector ();
+        D = Vector2 (sqrt3, 1).getUnitVector ();
+        E = Vector2 (sqrt3, -1).getUnitVector ();
+        F = Vector2 (0, -1).getUnitVector ();
+        Aa = Vector2 (-sqrt3, -1).getUnitVector ();
+
+        OldD = Vector2 (sqrt3, 1);
+        OldE = Vector2 (sqrt3, -1);
 
         AB = getAverageUnitVector2 (Aa, Bb);
         BC = getAverageUnitVector2 (Bb, C);
@@ -207,6 +227,8 @@ public:
         DE = getAverageUnitVector2 (D, E);
         EF = getAverageUnitVector2 (E, F);
         FA = getAverageUnitVector2 (F, Aa);
+
+        OldDE = getAverageUnitVector2 (OldD, OldE);
     }
     Vector2 right;
     Vector2 left;
@@ -227,6 +249,10 @@ public:
     Vector2 EF;
     Vector2 FA;
 
+    Vector2 OldD;
+    Vector2 OldE;
+    Vector2 OldDE;
+
     void AlignVehicleVectors (float degrees) {
         float degreesForAlignment = degrees;
 
@@ -243,13 +269,18 @@ public:
         DE.Rotate (degreesForAlignment);
         EF.Rotate (degreesForAlignment);
         FA.Rotate (degreesForAlignment);
+
+        OldD.Rotate (degreesForAlignment);
+        OldE.Rotate (degreesForAlignment);
+        OldDE.Rotate (degreesForAlignment);
     }
-private:
     Vector2 getAverageUnitVector2 (Vector2 a, Vector2 b) {
         Vector2 average = Vector2 (a.x + b.x, a.y + b.y);
         average = average.getUnitVector ();
         return average;
     }
+
+private:
 };
 
 
@@ -496,11 +527,22 @@ public:
 
     // for use with red color filter
     bool isBlueLight () {
-        float lowerBound = 1.6;
-        float upperBound = 2.5;
+        float lowerBound = 0.55;
+        float upperBound = 1.55; // should have been 1.7 ...s
         bool result = false;
 
         if (value >= lowerBound && value < upperBound) {
+            result = true;
+        }
+
+        return result;
+    }
+    bool isBlueLight (float testValue) { // note this is not for testing the current value of the CDS cell
+        float lowerBound = 0.55;
+        float upperBound = 1.7; // 1.55
+        bool result = false;
+
+        if (testValue >= lowerBound && testValue < upperBound) {
             result = true;
         }
 
@@ -510,10 +552,21 @@ public:
     // for use with red color filter
     bool isRedLight () {
         float lowerBound = 0;
-        float upperBound = 1.6;
+        float upperBound = 0.55;
         bool result = false;
 
         if (value >= lowerBound && value < upperBound) {
+            result = true;
+        }
+
+        return result;
+    }
+    bool isRedLight (float testValue) {  // note this is not for testing the current value of the CDS cell
+        float lowerBound = 0;
+        float upperBound = 0.55;
+        bool result = false;
+
+        if (testValue >= lowerBound && testValue < upperBound) {
             result = true;
         }
 
@@ -825,6 +878,10 @@ public:
         for (int k = 0; k < bumpsLength; k++) {
             bumps [k] = BumpSwitch (bmps [k]);
         }
+        
+        CF0 = 1.0; // correction factor for wheel 0 (the one in motor port 0)
+        CF1 = 1.0; // correction factor for wheel 1 (the one in motor port 1)
+        CF2 = 1.0; // correction factor for wheel 2 (the one in motor port 2)
     }
     Vehicle (Vehicle *veh) {
         pos = Vector2 (veh->pos.x, veh->pos.y);
@@ -849,6 +906,9 @@ public:
         for (int k = 0; k < bumpsLength; k++) {
             bumps [k] = BumpSwitch (veh->bumps [k]);
         }
+        CF0 = veh->CF0; // correction factor for wheel 0 (the one in motor port 0)
+        CF1 = veh->CF1; // correction factor for wheel 1 (the one in motor port 1)
+        CF2 = veh->CF2; // correction factor for wheel 2 (the one in motor port 2)
     }
     Vehicle () {
 
@@ -874,18 +934,28 @@ public:
 
     /*********************** navigation / movement functions *************************/
 
+    float CF0; // correction factor for wheel 0 (the one in motor port 0)
+    float CF1; // correction factor for wheel 1 (the one in motor port 1)
+    float CF2; // correction factor for wheel 2 (the one in motor port 2)
+
+    // this is the one that is used
     // turns counterclockwise; make sure the motor percent doesn't exceed 100; the vehicle's linear speed remains constant
     void Turn (float motorPercent) {
         float w0 = wheels [0].activePercent + motorPercent;
         float w1 = wheels [1].activePercent + motorPercent;
         float w2 = wheels [2].activePercent + motorPercent;
 
+        // multiply wheels by wheel correction factor
+        w0 = w0 * CF0;
+        w1 = w1 * CF1;
+        w2 = w2 * CF2;
+
         wheels [0].SetPercent (w0);
         wheels [1].SetPercent (w1);
         wheels [2].SetPercent (w2);
     }
     // turns counterclockwise; the vehicle's linear speed does not remain constant, but the net motor output remains constant (I haven't finished implementing this method correctly yet)
-    void TurnNeutral (float motorPercent) {
+    void TurnNeutral (float motorPercent) { // not used
         float w0 = wheels [0].activePercent;
         float w1 = wheels [1].activePercent;
         float w2 = wheels [2].activePercent;
@@ -902,18 +972,27 @@ public:
         wheels [1].SetPercent (w1);
         wheels [2].SetPercent (w2);
     }
-    void Move (Vector2 motorPercent2) {
+    void Move (Vector2 motorPercent2) { // not used
         float sqrt3 = sqrt (3.0);
         float w0 = -0.5 * motorPercent2.x  -  (sqrt3/2.0) * motorPercent2.y;
         float w1 = motorPercent2.x;
         float w2 = -0.5 * motorPercent2.x  +  (sqrt3/2.0) * motorPercent2.y;
 
+        // multiply wheels by wheel correction factor
+        w0 *= CF0;
+        w1 *= CF1;
+        w2 *= CF2;
+
         wheels [0].SetPercent (w0);
         wheels [1].SetPercent (w1);
         wheels [2].SetPercent (w2);
     }
+    // this is the one that is used
     // sets wheel speeds using a given unit vector direction and its magnitude (where its magnitude corresponds to the motor's power percent)
     void Move (Vector2 direction, float magnitude) {
+        // cout << "Mag: " << magnitude << endl;
+        // direction = direction.getUnitVector();
+        
         float sqrt3 = sqrt (3.0);
         float w0 = 0.5 * direction.x  -  (sqrt3/2.0) * direction.y;
         float w1 = -direction.x;
@@ -923,6 +1002,17 @@ public:
         w1 *= magnitude;
         w2 *= magnitude;
 
+        // multiply wheels by wheel correction factor
+        w0 *= CF0;
+        w1 *= CF1;
+        w2 *= CF2;
+
+        /*
+        cout << "1: " << w0 << endl;
+        cout << "2: " << w1 << endl;
+        cout << "3: " << w2 << endl;
+        */
+        
         wheels [0].SetPercent (w0);
         wheels [1].SetPercent (w1);
         wheels [2].SetPercent (w2);
@@ -1131,6 +1221,7 @@ private:
                 LCD.FillRectangle ( (int)(box.points[0].x), -(int)(box.points[0].y) - 1, box.width + 1, box.height + 1 );
                 // draw the actual button
                 LCD.SetFontColor (WHITE);
+                LCD.SetBackgroundColor (WALLCOLOR);
                 LCD.WriteAt ( text, (int)(box.points[0].x+BUTT_MARGIN), -(int)(box.points[0].y - box.height / 2.0 + TEXT_HEIGHT / 2.0) );
                 LCD.DrawRectangle ( (int)(box.points[0].x), -(int)(box.points[0].y), box.width, box.height );
                 break;
@@ -1163,5 +1254,72 @@ private:
                 LCD.SetBackgroundColor (BLACK);
                 break;
         }
+    }
+};
+
+
+class StateIndicator {
+public:
+    // creates a box object, taking as its parameters a box object representing its boundary, a character pointer to an array indicating the text
+    // to be displayed on the object, // and an an integer representing the type of indicator it is
+    StateIndicator (Box bounds, char txt[]) {
+        box = bounds;
+        strcpy (text, txt);
+        type = 0;
+        BUTT_MARGIN = 5;
+        
+        backgroundColor = ABYSS;
+        borderColor = WHITE;
+        textColor = WHITE;
+    }
+    StateIndicator () {
+        
+    }
+    Box box;
+    int type;
+    char text[100];
+    int BUTT_MARGIN;
+    static const int TEXT_HEIGHT = 10;
+    int backgroundColor;
+    int borderColor;
+    int textColor;
+    
+    // updates the text of the indicator
+    void UpdateText (char txt[]) {
+        strcpy (text, txt);
+    }
+    // updates the color of the indicator, given a background color, border color, and text color
+    void UpdateColors (int background, int border, int textC) {
+        backgroundColor = background;
+        borderColor = border;
+        textColor = textC;
+    }
+    // updates the color of the indicator, given a background color and border color
+    void UpdateColors (int background, int border) {
+        backgroundColor = background;
+        borderColor = border;
+    }
+    // updates the color of the indicator, given a background color
+    void UpdateColors (int background) {
+        backgroundColor = background;
+    }
+    // draws the indicator
+    void Draw () {
+        DrawIndicator (); // this method is kinda redundant
+    }
+private:
+    static const int ABYSS = 0x1a1a1a;
+    
+    // actually draws indicator
+    void DrawIndicator () {
+        // effectively erase the button before drawing the un-pressed version
+        LCD.SetFontColor (backgroundColor);
+        LCD.FillRectangle ( (int)(box.points[0].x), -(int)(box.points[0].y), box.width, box.height );
+        // draw the actual button
+        LCD.SetFontColor (textColor);
+        LCD.SetBackgroundColor (backgroundColor);
+        LCD.WriteAt ( text, (int)(box.points[0].x+BUTT_MARGIN), -(int)(box.points[0].y - box.height / 2.0 + TEXT_HEIGHT / 2.0) );
+        LCD.SetFontColor (borderColor);
+        LCD.DrawRectangle ( (int)(box.points[0].x), -(int)(box.points[0].y), box.width, box.height );
     }
 };
