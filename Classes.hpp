@@ -161,10 +161,69 @@ public:
         // cout << "Angle: " << angle << endl;
         return angle;
     }
+    // gets angle formed by the vector, but ensures that the returned angle is between 0 and 360
+    float getCappedAngle () {
+        float cappedAngle = getAngle ();
+        CapDegrees (cappedAngle);
+        return cappedAngle;
+    }
+    // returns the degrees capped at 360 and 0
+    const static float CapDegrees (float degrees) {
+        if (degrees >= 360) {
+            degrees -= 360;
+        } else if (degrees < 0) {
+            degrees += 360;
+        }
+        return degrees;
+    }
     // returns a vector equivalent for the given angle
-    Vector2 DegreesToVector2 (float degrees) {
+    static Vector2 DegreesToVector2 (float degrees) {
         Vector2 dir = Vector2 (1, tan (degrees * DEGREES_TO_RADS));
         return dir;
+    }
+    // gets Cross Product between this and other (this x other)
+    float CalculateCrossProduct (Vector2 other) {
+        float result = x * other.y  -  y * other.x;
+        return result;
+    }
+    // calculates dot product
+    const static float Dot (Vector2 first, Vector2 second) {
+        float result = first.x * second.x  +  first.y * second.y;
+        return result;
+    }
+    // gets projection of the given vector onto this (in direction of this; magnitude -> other)
+    const static Vector2 Proj (Vector2 dir, Vector2 vect) {
+        // norm #this * #this
+        float bottom = dir.getMagnitude (); // or dir dot dir
+        // dot #this and other
+        float dot = Dot (dir, vect);
+        // scaler = dot / norm
+        float scalar = dot / bottom;
+        // this * scalar
+        Vector2 proj = Vector2 (dir.x * scalar, dir.y * scalar);
+        
+        return proj;
+    }
+    // gets "scal" of the given vector onto this (in direction of this; magnitude -> other)
+    const static float Scal (Vector2 dir, Vector2 vect) {
+        // norm #this * #this
+        float bottom = dir.getMagnitude (); // or dir dot dir
+        // dot #this and other
+        float dot = Dot (dir, vect);
+        // scaler = dot / norm
+        float scalar = dot / bottom;
+        
+        return scalar;
+    }
+    // gets the slope from the first vector to the second vector in vector form
+    const static Vector2 SlopeVect (Vector2 first, Vector2 second) {
+        Vector2 slope = Vector2 (second.x - first.x, second.y - first.y);
+        
+        return slope;
+    }
+    // calculates distance between two points
+    const static float Distance (Vector2 start, Vector2 end) {
+        return sqrt (  pow (end.x - start.x, 2.0)  +  pow (end.y - start.y, 2.0)  );
     }
 };
 
@@ -211,12 +270,15 @@ public:
 
         const double sqrt3 = sqrt (3.0);
 
-        Bb = Vector2 (-sqrt3, 1);
-        C = Vector2 (0, 1);
-        D = Vector2 (sqrt3, 1);
-        E = Vector2 (sqrt3, -1);
-        F = Vector2 (0, -1);
-        Aa = Vector2 (-sqrt3, -1);
+        Bb = Vector2 (-sqrt3, 1).getUnitVector ();
+        C = Vector2 (0, 1).getUnitVector ();
+        D = Vector2 (sqrt3, 1).getUnitVector ();
+        E = Vector2 (sqrt3, -1).getUnitVector ();
+        F = Vector2 (0, -1).getUnitVector ();
+        Aa = Vector2 (-sqrt3, -1).getUnitVector ();
+
+        OldD = Vector2 (sqrt3, 1);
+        OldE = Vector2 (sqrt3, -1);
 
         AB = getAverageUnitVector2 (Aa, Bb);
         BC = getAverageUnitVector2 (Bb, C);
@@ -224,6 +286,8 @@ public:
         DE = getAverageUnitVector2 (D, E);
         EF = getAverageUnitVector2 (E, F);
         FA = getAverageUnitVector2 (F, Aa);
+
+        OldDE = getAverageUnitVector2 (OldD, OldE);
     }
     Vector2 right;
     Vector2 left;
@@ -244,6 +308,10 @@ public:
     Vector2 EF;
     Vector2 FA;
 
+    Vector2 OldD;
+    Vector2 OldE;
+    Vector2 OldDE;
+
     void AlignVehicleVectors (float degrees) {
         float degreesForAlignment = degrees;
 
@@ -260,13 +328,18 @@ public:
         DE.Rotate (degreesForAlignment);
         EF.Rotate (degreesForAlignment);
         FA.Rotate (degreesForAlignment);
+
+        OldD.Rotate (degreesForAlignment);
+        OldE.Rotate (degreesForAlignment);
+        OldDE.Rotate (degreesForAlignment);
     }
-//private:
     Vector2 getAverageUnitVector2 (Vector2 a, Vector2 b) {
         Vector2 average = Vector2 (a.x + b.x, a.y + b.y);
         average = average.getUnitVector ();
         return average;
     }
+
+private:
 };
 
 
@@ -300,49 +373,85 @@ public:
         points [0] = v0;
         points [1] = v1;
         dir = direction;
-        switch (dir) {
-            case 0:
-                norm = IntVector2 (0, -1);
-                break;
-            case 1:
-                norm = IntVector2 (-1, 0);
-                break;
-            case 2:
-                norm = IntVector2 (0, 1);
-                break;
-            case 3:
-                norm = IntVector2 (1, 0);
-                break;
-            default:
-                break;
-        }
+        norm = DirToIntVector2 (direction);
+        normal = Vector2 (norm.x, norm.y).getUnitVector ();
     }
-    Edge (Vector2 v0, Vector2 v1, IntVector2 normal) {
+    Edge (Vector2 v0, Vector2 v1, IntVector2 norm0) {
         points [0] = v0;
         points [1] = v1;
-        norm = normal;
-        if (normal.x == 0) {
-            if (normal.y == 1) {
-                dir = 2;
-            } else if (normal.y == -1) {
-                dir = 0;
-            }
-        } else if (normal.y == 0) {
-            if (normal.x == 1) {
-                dir = 3;
-            } else if (normal.x == -1) {
-                dir = 1;
-            }
-        } else {
-            dir = -1;
-        }
+        norm = norm0;
+        dir = IntVector2ToDir (norm0);
+        normal = Vector2 (norm.x, norm.y).getUnitVector ();
+    }
+    // creates an edge object, and calculates the normal vector automatically
+    Edge (Vector2 v0, Vector2 v1) {
+        points [0] = v0;
+        points [1] = v1;
+        norm = IntVector2 (0, 0);
+        dir = 0;
+        normal = getNormal ().getUnitVector ();
     }
     Edge () {
 
     }
-    Vector2 points[2];
+    Vector2 points [2];
     int dir;
-    IntVector2 norm;
+    IntVector2 norm; // legacy normal vector
+    Vector2 normal; // the real normal vector
+    
+    // flips the two points that make up the edge; also updates the edges normals
+    void FlipPoints () {
+        Vector2 tempPoint = points [0];
+        points [0] = points [1];
+        points [1] = tempPoint;
+        normal = getNormal ().getUnitVector ();
+    }
+    // calculates and returns the normal vector of the edge
+    Vector2 getNormal () {
+        // Vector2 tempNormal = Vector2 (0, 0);
+        Vector2 tempNormal = Vector2 (points [1].x - points [0].x, points [1].y - points [0].y);
+        tempNormal.RotateLeft ();
+        return tempNormal;
+    }
+    const static IntVector2 DirToIntVector2 (int tempDir) {
+        IntVector2 tempNorm;
+        switch (tempDir) {
+            case 0:
+                tempNorm = IntVector2 (0, -1);
+                break;
+            case 1:
+                tempNorm = IntVector2 (-1, 0);
+                break;
+            case 2:
+                tempNorm = IntVector2 (0, 1);
+                break;
+            case 3:
+                tempNorm = IntVector2 (1, 0);
+                break;
+            default:
+                break;
+        }
+        return tempNorm;
+    }
+    const static int IntVector2ToDir (IntVector2 tempNorm) {
+        int tempDir = 0;
+        if (tempNorm.x == 0) {
+            if (tempNorm.y == 1) {
+                tempDir = 2;
+            } else if (tempNorm.y == -1) {
+                tempDir = 0;
+            }
+        } else if (tempNorm.y == 0) {
+            if (tempNorm.x == 1) {
+                tempDir = 3;
+            } else if (tempNorm.x == -1) {
+                tempDir = 1;
+            }
+        } else {
+            tempDir = -1;
+        }
+        return tempDir;
+    }
 };
 
 
@@ -417,6 +526,25 @@ public:
         Edge eastEdge = Edge (points[1], points[3], 3);
         return eastEdge;
     }
+    
+    /*
+    Edge getInvertedSouthEdge () {
+        Edge southEdge = Edge (points[2], points[3], 2);
+        return southEdge;
+    }
+    Edge getInvertedWestEdge () {
+        Edge westEdge = Edge (points[0], points[2], 3);
+        return westEdge;
+    }
+    Edge getInvertedNorthEdge () {
+        Edge northEdge = Edge (points[0], points[1], 0);
+        return northEdge;
+    }
+    Edge getInvertedEastEdge () {
+        Edge eastEdge = Edge (points[1], points[3], 1);
+        return eastEdge;
+    }
+    */
 };
 
 
@@ -476,6 +604,24 @@ public:
         for (int k = 0; k < length; k++) {
             points [k] = Vector2 (points [k].x + move.x, points [k].y + move.y);
         }
+    }
+    // converts the given shape to a polygon
+    const static Polygon ConvertToPolygon (Box shape) {
+        Vector2 polyPoints [4] = {   shape.points [0],  shape.points [1],  shape.points [3],  shape.points [2]  };
+        Polygon poly = Polygon (polyPoints, 4);
+        return poly;
+    }
+    // converts the given shape to a polygon
+    const static Polygon ConvertToPolygon (Edge shape) {
+        Vector2 polyPoints [2] = {   shape.points [0],  shape.points [1]  }; // hmmm... not really a polygon
+        Polygon poly = Polygon (polyPoints, 2);
+        return poly;
+    }
+    // converts the given shape to an inverted polygon
+    const static Polygon ConvertToFlippedPolygon (Box shape) {
+        Vector2 polyPoints [4] = {   shape.points [0],  shape.points [2],  shape.points [3],  shape.points [1]  };
+        Polygon poly = Polygon (polyPoints, 4);
+        return poly;
     }
 private:
 public:
@@ -710,6 +856,9 @@ public:
     Vector2 dir; // the forward direction (normal) of the bump switch
     Vector2 stdPos; // the bump's position in standard position (with no additional rotation applied)
     Vector2 stdDir; // the bump's direction in standard position (with no additional rotation applied)
+    Vector2 startPos; // used for debugging the simulation; should delete in the future
+    Vector2 endPos; // used for debugging the simulation; should delete in the future
+
 
     bool value;
 
@@ -864,6 +1013,13 @@ public:
         for (int k = 0; k < bumpsLength; k++) {
             bumps [k] = BumpSwitch (bmps [k]);
         }
+        
+        CF0 = 1.0; // correction factor for wheel 0 (the one in motor port 0)
+        CF1 = 1.0; // correction factor for wheel 1 (the one in motor port 1)
+        CF2 = 1.0; // correction factor for wheel 2 (the one in motor port 2)
+        
+        color = BLACK;
+        isSimulated = false;
     }
     Vehicle (Vehicle *veh) {
         pos = Vector2 (veh->pos.x, veh->pos.y);
@@ -888,6 +1044,12 @@ public:
         for (int k = 0; k < bumpsLength; k++) {
             bumps [k] = BumpSwitch (veh->bumps [k]);
         }
+        CF0 = veh->CF0; // correction factor for wheel 0 (the one in motor port 0)
+        CF1 = veh->CF1; // correction factor for wheel 1 (the one in motor port 1)
+        CF2 = veh->CF2; // correction factor for wheel 2 (the one in motor port 2)
+        
+        color = BLACK;
+        isSimulated = veh->isSimulated;
     }
     Vehicle () {
 
@@ -904,6 +1066,10 @@ public:
     // variables primarily used for simulation
     Vector2 vel; // the velocity of the vehicle
     float angVel; // the angular velocity of the vehicle in degrees per second
+    
+    // graphics
+    int color;
+    bool isSimulated; // whether the vehicle is a simulated vehicle or not
 
 
     /*********************** general functions *************************/
@@ -913,6 +1079,9 @@ public:
 
     /*********************** navigation / movement functions *************************/
 
+    float CF0; // correction factor for wheel 0 (the one in motor port 0)
+    float CF1; // correction factor for wheel 1 (the one in motor port 1)
+    float CF2; // correction factor for wheel 2 (the one in motor port 2)
 
     // this is the one that is used
     // turns counterclockwise; make sure the motor percent doesn't exceed 100; the vehicle's linear speed remains constant
@@ -922,9 +1091,9 @@ public:
         float w2 = wheels [2].activePercent + motorPercent;
 
         // multiply wheels by wheel correction factor
-        //w0 = w0 * CF0;
-        //w1 = w1 * CF1;
-        //w2 = w2 * CF2;
+        w0 = w0 * CF0;
+        w1 = w1 * CF1;
+        w2 = w2 * CF2;
 
         wheels [0].SetPercent (w0);
         wheels [1].SetPercent (w1);
@@ -955,9 +1124,9 @@ public:
         float w2 = -0.5 * motorPercent2.x  +  (sqrt3/2.0) * motorPercent2.y;
 
         // multiply wheels by wheel correction factor
-       // w0 *= CF0;
-        //w1 *= CF1;
-        //w2 *= CF2;
+        w0 *= CF0;
+        w1 *= CF1;
+        w2 *= CF2;
 
         wheels [0].SetPercent (w0);
         wheels [1].SetPercent (w1);
@@ -966,6 +1135,9 @@ public:
     // this is the one that is used
     // sets wheel speeds using a given unit vector direction and its magnitude (where its magnitude corresponds to the motor's power percent)
     void Move (Vector2 direction, float magnitude) {
+        // cout << "Mag: " << magnitude << endl;
+        // direction = direction.getUnitVector();
+        
         float sqrt3 = sqrt (3.0);
         float w0 = 0.5 * direction.x  -  (sqrt3/2.0) * direction.y;
         float w1 = -direction.x;
@@ -976,10 +1148,16 @@ public:
         w2 *= magnitude;
 
         // multiply wheels by wheel correction factor
-        //w0 *= CF0;
-        //w1 *= CF1;
-        //w2 *= CF2;
+        w0 *= CF0;
+        w1 *= CF1;
+        w2 *= CF2;
 
+        /*
+        cout << "1: " << w0 << endl;
+        cout << "2: " << w1 << endl;
+        cout << "3: " << w2 << endl;
+        */
+        
         wheels [0].SetPercent (w0);
         wheels [1].SetPercent (w1);
         wheels [2].SetPercent (w2);
@@ -1188,6 +1366,7 @@ private:
                 LCD.FillRectangle ( (int)(box.points[0].x), -(int)(box.points[0].y) - 1, box.width + 1, box.height + 1 );
                 // draw the actual button
                 LCD.SetFontColor (WHITE);
+                LCD.SetBackgroundColor (WALLCOLOR);
                 LCD.WriteAt ( text, (int)(box.points[0].x+BUTT_MARGIN), -(int)(box.points[0].y - box.height / 2.0 + TEXT_HEIGHT / 2.0) );
                 LCD.DrawRectangle ( (int)(box.points[0].x), -(int)(box.points[0].y), box.width, box.height );
                 break;
@@ -1283,8 +1462,102 @@ private:
         LCD.FillRectangle ( (int)(box.points[0].x), -(int)(box.points[0].y), box.width, box.height );
         // draw the actual button
         LCD.SetFontColor (textColor);
+        LCD.SetBackgroundColor (backgroundColor);
         LCD.WriteAt ( text, (int)(box.points[0].x+BUTT_MARGIN), -(int)(box.points[0].y - box.height / 2.0 + TEXT_HEIGHT / 2.0) );
         LCD.SetFontColor (borderColor);
         LCD.DrawRectangle ( (int)(box.points[0].x), -(int)(box.points[0].y), box.width, box.height );
     }
 };
+
+
+class CourseObjects {
+public:
+    CourseObjects () {
+        bounds = Box (Vector2 (0, 0), COURSE_WIDTH, COURSE_HEIGHT);
+        
+        bumb = Box (Vector2 (1, -340), 232, 11);
+        discoBall = Circle (Vector2(155.5, -161), 25);
+        obstacleBox = Box (Vector2 (174, -351+999999), 59, 39); // 175
+        
+        DDRPad = Box (Vector2 (214, -569), 97, 48);
+        DDRButtons = Box (Vector2 (214, -636), 97, 48);
+        rightRamp = Box (Vector2 (232, -258), 116, 240);
+        
+        foosball = Box (Vector2 (155, -2), 166, 39);
+        leverBank = Edge (Vector2 (1, -124), Vector2 (123, -2));
+        leverBank.FlipPoints ();
+        tokenSlot = Box (Vector2 (116, -351), 59 + 59, 39); // tokenSlot = Box (Vector2 (116, -351), 59, 39);
+        tokenBowl = Circle (Vector2(146, -403.5), 22);
+        
+        leftRamp = Box (Vector2 (1, -351), 115, 87);
+        finalBank = Edge (Vector2 (1, -617), Vector2 (83, -699));
+        
+        boxCount = 0;
+        // boxes [boxCount++] = ToRealObject (bumb);
+        boxes [boxCount++] = ToRealObject (obstacleBox);
+        boxes [boxCount++] = ToRealObject (DDRButtons);
+        // boxes [boxCount++] = ToRealObject (rightRamp);
+        boxes [boxCount++] = ToRealObject (foosball);
+        boxes [boxCount++] = ToRealObject (tokenSlot);
+        // boxes [boxCount++] = ToRealObject (leftRamp);
+        edgeCount = 0;
+        edges [edgeCount++] = ToRealObject (leverBank);
+        edges [edgeCount++] = ToRealObject (finalBank);
+        invertedBoxCount = 0;
+        invertedBoxes [invertedBoxCount++] = ToRealObject (bounds);
+    }
+    Box bounds;
+    
+    Box bumb; // 232x11
+    Circle discoBall;
+    Box obstacleBox;
+    
+    Box DDRPad; // 97x45
+    Box DDRButtons; // 97x48
+    Box rightRamp; // 115x240
+    
+    Box foosball; // 25x39 // 166x41
+    Edge leverBank;
+    Box tokenSlot; // 115x240
+    Circle tokenBowl;
+    
+    Box leftRamp; // 115x87
+    Edge finalBank;
+    
+    static const int SHAPE_COUNT = 64;
+    int edgeCount;
+    int boxCount;
+    int invertedBoxCount;
+    Edge edges [SHAPE_COUNT];
+    Box boxes [SHAPE_COUNT];
+    Box invertedBoxes [1];
+    
+    constexpr static float COURSE_PIXELS_TO_INCHES = 1.0 / 9.72222222222;
+    static const int COURSE_WIDTH = 350;
+    static const int COURSE_HEIGHT = 700;
+    
+    // conpoints a local position relative to the course to a global position
+    Vector2 ToRealPosition (Vector2 local) {
+        // Vector2 global = Vector2 (local.x * COURSE_PIXELS_TO_INCHES, local.y * COURSE_PIXELS_TO_INCHES);
+        Vector2 global = Vector2 (local.x * COURSE_PIXELS_TO_INCHES, local.y * COURSE_PIXELS_TO_INCHES);
+        return global;
+    }
+    // convert course object in pixel coordinates real world coordinates (inches)
+    Box ToRealObject (Box obj) {
+        // convert the box to global coordinates
+        Box globalObj = Box ( ToRealPosition (obj.points[0]), obj.width * COURSE_PIXELS_TO_INCHES, obj.height * COURSE_PIXELS_TO_INCHES);
+        // return the global box
+        return globalObj;
+    }
+    Edge ToRealObject (Edge obj) {
+        // convert the box to global coordinates
+        Edge globalObj = Edge ( ToRealPosition (obj.points[0]), ToRealPosition (obj.points[1]), obj.dir);
+        // return the global box
+        return globalObj;
+    }
+private:
+};
+
+
+
+
