@@ -305,6 +305,9 @@ class Course;
 #define D1 0
 #define F0 1
 
+#define LOWERED_SERVO_ANGLE 65
+#define RAISED_SERVO_ANGLE 170
+
 #define CLICK_MODE 1 // currently simulation only; for graphic use; if enabled, sets the vehicle's position to the position clicked on the screen
 
 Vector2 touch = Vector2 ();
@@ -768,7 +771,7 @@ public:
     }
 
     // perform the state's actions
-    virtual const bool Go () {
+    virtual const bool Go (Navigator *navPtr) {
         // cout << "Ruh roh" << endl;
         return false;
     }
@@ -791,8 +794,8 @@ public:
     bool (Navigator::*functionPtr) (); // declares a pointer to a function
 
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
-    virtual const bool Go () {
-        return (nav->*functionPtr) (); // calls the function in which functionPtr is pointing to
+    virtual const bool Go (Navigator *navPtr) {
+        return (navPtr->*functionPtr) (); // calls the function in which functionPtr is pointing to
     }
 private:
 };
@@ -827,8 +830,8 @@ public:
     int i1;
 
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
-    virtual const bool Go () {
-        return (nav->*functionPtr) (v0, f0, f1, i0, i1); // calls the function in which functionPtr is pointing to
+    virtual const bool Go (Navigator *navPtr) {
+        return (navPtr->*functionPtr) (v0, f0, f1, i0, i1); // calls the function in which functionPtr is pointing to
     }
 private:
 };
@@ -861,8 +864,8 @@ public:
     int i0;
 
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
-    virtual const bool Go () {
-        return (nav->*functionPtr) (v0, f0, f1, i0); // calls the function in which functionPtr is pointing to
+    virtual const bool Go (Navigator *navPtr) {
+        return (navPtr->*functionPtr) (v0, f0, f1, i0); // calls the function in which functionPtr is pointing to
     }
 private:
 };
@@ -890,8 +893,8 @@ public:
     float f2;
     
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
-    virtual const bool Go () {
-        return (nav->*functionPtr) (v0, f0, f1, f2); // calls the function in which functionPtr is pointing to
+    virtual const bool Go (Navigator *navPtr) {
+        return (navPtr->*functionPtr) (v0, f0, f1, f2); // calls the function in which functionPtr is pointing to
     }
 private:
 };
@@ -921,8 +924,8 @@ public:
     float f3;
     
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
-    virtual const bool Go () {
-        return (nav->*functionPtr) (v0, f0, f1, f2, f3); // calls the function in which functionPtr is pointing to
+    virtual const bool Go (Navigator *navPtr) {
+        return (navPtr->*functionPtr) (v0, f0, f1, f2, f3); // calls the function in which functionPtr is pointing to
     }
 private:
 };
@@ -948,8 +951,8 @@ public:
     float f1;
 
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
-    virtual const bool Go () {
-        return (nav->*functionPtr) (v0, f0, f1); // calls the function in which functionPtr is pointing to
+    virtual const bool Go (Navigator *navPtr) {
+        return (navPtr->*functionPtr) (v0, f0, f1); // calls the function in which functionPtr is pointing to
     }
 private:
 };
@@ -980,8 +983,8 @@ public:
     int i0;
 
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
-    virtual const bool Go () {
-        return (nav->*functionPtr) (v0, f0, i0); // calls the function in which functionPtr is pointing to
+    virtual const bool Go (Navigator *navPtr) {
+        return (navPtr->*functionPtr) (v0, f0, i0); // calls the function in which functionPtr is pointing to
     }
 private:
 };
@@ -1011,8 +1014,8 @@ public:
     int i0;
 
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
-    virtual const bool Go () {
-        return (nav->*functionPtr) (f0, f1, i0); // calls the function in which functionPtr is pointing to
+    virtual const bool Go (Navigator *navPtr) {
+        return (navPtr->*functionPtr) (f0, f1, i0); // calls the function in which functionPtr is pointing to
     }
 private:
 };
@@ -1038,8 +1041,8 @@ public:
     float f1;
 
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
-    virtual const bool Go () {
-        return (nav->*functionPtr) (f0, f1); // calls the function in which functionPtr is pointing to
+    virtual const bool Go (Navigator *navPtr) {
+        return (navPtr->*functionPtr) (f0, f1); // calls the function in which functionPtr is pointing to
     }
 private:
 };
@@ -1061,8 +1064,8 @@ public:
     float f0;
 
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
-    virtual const bool Go () {
-        return (nav->*functionPtr) (f0); // calls the function in which functionPtr is pointing to
+    virtual const bool Go (Navigator *navPtr) {
+        return (navPtr->*functionPtr) (f0); // calls the function in which functionPtr is pointing to
     }
 private:
 };
@@ -1089,7 +1092,7 @@ public:
         timeWhenStateChanged = 0;
     }
     // vector<State*> states; // state data vector
-    State *states [64]; // was 64
+    State *states [99]; // was 64
     int length; // the length of the state data vector
     int currentState;
     float timeWhenStateChanged;
@@ -1100,6 +1103,13 @@ public:
         // states.resize (++length); // resize data vector // this is pretty inefficient but oh well
         states [length++] = newState;
     }
+    /*
+    void Add (State *newState) { // takes an State struct as an argument
+        // states.push_back (newState); // add the given state to the state data vector
+        // states.resize (++length); // resize data vector // this is pretty inefficient but oh well
+        states [length++] = newState;
+    }
+    */
     // goes to the next state
     void Next () {
         // simultanesouly increment the current state of the state machine while checking if the current state was the final state
@@ -1109,10 +1119,14 @@ public:
         timeWhenStateChanged = TimeNow ();
     }
 
-    void Update () {
+    void Update (Navigator *navPtr) {
         // cout << "Go! " << currentState << endl;
         // call event data function until it returns true (the end condition is met)
-        bool stateFinished = states [currentState]->Go ();
+        if (currentState == 1) {
+            
+        }
+        bool stateFinished = states [currentState]->Go (navPtr);
+        // cout << "Go! " << currentState << endl;
         // if the end condition is met, then increment the current state and ~note the time in which the state ended
         if (stateFinished) {
             Next ();
@@ -1136,6 +1150,12 @@ public:
     Navigator (Vehicle *vehicle) {
         veh = vehicle;
         SM = StateMachine ();
+        
+        // initialize constants
+        
+        STOP_DURATION = 1.0;
+        
+        // initialize global variables
 
         timeWhenRotationStarted = 0;
         timeRequiredForRotation = 0;
@@ -1159,6 +1179,9 @@ public:
         rotateAngleRotation = 0;
         
         lastTouchCoordinate = Vector2 (0, 0);
+        
+        // add states to the statemachine to perform the navigation procedure specified in the method below
+        // PerformanceTestFour ();
     }
     Navigator () {
 
@@ -1182,6 +1205,10 @@ public:
     float rotateAngleRotation;
     
     Vector2 lastTouchCoordinate;
+    
+    // declare constants
+    
+    float STOP_DURATION; // variable for controlling the stop interval often used in navigation procedures
 
     // turn a ceratin amount of degrees; must be called repeadetly from a loop; returns true once the turn is complete
     bool TurnDegrees (float degrees, float motorPercent) {
@@ -1190,7 +1217,8 @@ public:
             veh->Turn (motorPercent);
             float angVel = ANG_VELOCITY_AT_50_POWER * 2.0 * motorPercent / 100.0;
             // timeRequiredForRotation = abs (degrees / angVel); // t = Ø / w; may remove abs in the future
-            timeRequiredForRotation = degrees / angVel;
+            float newAngleAdjustment = 1.15; // new angle adjustment recently added to make the function more accurate // 1.1293 // 1.3 // 1.18 // 1.15
+            timeRequiredForRotation = newAngleAdjustment * degrees / angVel;
             timeWhenRotationStarted = TimeNow ();
             rotationDidNotJustStart = true;
             // cout << "delta t = " << timeRequiredForRotation << endl;
@@ -1232,7 +1260,7 @@ public:
             // moveCoordDirection = moveCoordDirection.getUnitVector ();
             // moveCoordDirection = GetGlobalVector (moveCoordDirection);
             
-            float signedPower = abs (power) * SignOf (rotateAngleRotation); // ensure that the power is in the correct direction
+            float signedPower = abs (power) * SignOf (rotateAngleRotation); // ensure that the power is in the correct direction // maybe this could be causing problems
             result = TurnDegrees (rotateAngleRotation, signedPower);
         } else if (rotationDidNotJustStart) {
             float signedPower = abs (power) * SignOf (rotateAngleRotation); // ensure that the power is in the correct direction
@@ -1299,6 +1327,7 @@ public:
      */
     bool StopVehicle (float stopTime) {
         veh->Stop ();
+        // cout << "Stuff is happening." << endl;
         return (TimeNow() - SM.timeWhenStateChanged > stopTime);
     }
 
@@ -1483,6 +1512,7 @@ public:
         veh->Turn (-turnPower);
         return (TimeNow() - SM.timeWhenStateChanged > duration);
     }
+    
     /*
      * Moves the vehicle in the given global @direction with the given @power while turning with the given @turnPower CCW
      * until the vehicle has passed the given @xValue or until the given @timeOutDuration in seconds has passed.
@@ -1497,6 +1527,46 @@ public:
             veh->Move (GetGlobalVector (direction), power);
             veh->Turn (-turnPower);
         }
+        return result;
+    }
+    
+    /*
+     * Moves the vehicle in the given global @direction with the given @power while turning with the given @turnPower CCW
+     * until the vehicle has passed the given @xValue or until the given @timeOutDuration in seconds has passed. Also
+     * perform abort adjustment if the RPS signal is not valid.
+     * @return true when the action is complete, false otherwise.
+     */
+    bool GlobalMoveWhileTurningWithAbortUntilAboveY (Vector2 direction, float power, float timeOutDuration, float turnPower, float yValue) {
+        bool result = false;
+        bool isValidSignal = rps.isValid ();
+        float rotationErrorAmount = -10; // -30 // -10
+        
+        // check if the action is complete; if it is, then mayhaps reset something
+        if (movementDidNotJustStart == false && isValidSignal) {
+            movementDidNotJustStart = true;
+            
+            veh->Move (GetGlobalVector (direction), power);
+            veh->Turn (-turnPower);
+        } else if (!isValidSignal) {
+            // veh->Stop ();
+            // cout << "Doing things." << endl;
+            Vector2 inaccurateGlobalDirection = GetGlobalVector (direction);
+            inaccurateGlobalDirection.Rotate (rotationErrorAmount); // the rotated amount should technically depend on the given turnPower but for our uses it won't ever matter
+            
+            // veh->Move (inaccurateGlobalDirection, power);
+            veh->Move (inaccurateGlobalDirection, power + turnPower);
+            // veh->Turn (-turnPower);
+        } else {
+            result = rps.Y () >= yValue || TimeNow() - SM.timeWhenStateChanged > timeOutDuration;
+            
+            if (result) {
+                movementDidNotJustStart = false;
+            } else {
+                veh->Move (GetGlobalVector (direction), power);
+                veh->Turn (-turnPower);
+            }
+        }
+        
         return result;
     }
     
@@ -1545,6 +1615,12 @@ public:
     }
     */
 
+    bool MoveWhileTurningDuration (Vector2 direction, float power, float duration, float turnPower) {
+        veh->Move (direction, power);
+        veh->Turn (-turnPower);
+        return (TimeNow() - SM.timeWhenStateChanged > duration);
+    }
+
     float minLightValue;
     bool MoveToGetMinLightValue (Vector2 direction, float power, float duration) {
         veh->Move (direction, power);
@@ -1555,25 +1631,33 @@ public:
     }
 
     void ResetMin () {
-        minLightValue = 99999;
+        minLightValue = 9999999;
+        isBlue = false;
     }
 
     bool MoveDurationBlueShiftUsingMin () {
         bool complete = false;
-        bool isBlue = false;
+        // bool isBlue = false;
 
         //if((0.0<=cds0.Value())&&(cds0.Value<=0.7)){
-        if (veh->cds.isRedLight(minLightValue)) {
+        if (veh->cds.isRedLight (minLightValue)) {
+            // cout << "Do red." << endl;
             complete = true;
         //} else if (((0.7<cds0.Value())&&(cds0.Value<=1.5))||isBlue) {
-        } else if (veh->cds.isBlueLight(minLightValue) || isBlue) {
+        } else if (veh->cds.isBlueLight (minLightValue) || isBlue) {
+            // cout << "Do blue." << endl;
             isBlue = true;
             veh->Move (Vector.DE, 35);
-            complete = (TimeNow()-SM.timeWhenStateChanged > .85);
+            complete = (TimeNow()-SM.timeWhenStateChanged > .7); // .85
         } else {
-            complete = (TimeNow()-SM.timeWhenStateChanged > 2.0);// time-out error
+            // cout << "Timed out." << endl;
+            // complete = (TimeNow()-SM.timeWhenStateChanged > 2.0); // time-out error
+            complete = true;
         }
-
+        if (complete) {
+            isBlue = false;
+        }
+        
         return complete;
     }
 
@@ -1690,13 +1774,7 @@ public:
         veh->servo.SetDegree (degrees);
         return (TimeNow() - SM.timeWhenStateChanged > waitTime);
     }
-
-    /*
-     * Does DDR stuff.
-     */
-    bool DoDDR () {
-        return (TimeNow() - SM.timeWhenStateChanged > 69.420);
-    }
+    
 
     bool WaitForBlueLight () {
         return veh->cds.isBlueLight();
@@ -1717,644 +1795,371 @@ public:
     // update the navigator; must be called repeatedly for everything to work properly
     void Update () {
         UpdateHardwareInput ();
-        // SM.Update ();
-        PerformanceTestFourD1 (); // the current robot control procedure
-        
-        /*
-        // fun little thing that makes the robot go to a position on the course by touching the screen
-        if (CLICK_MODE == 2) {
-            ClickMode ();
-        }
-        */
+
+        SM.Update (this);
         
         UpdateHardwareOutput ();
     }
     
-    // perform all of the navigation procedures associated with click mode; fun little function that makes the robot go to a position on the course by touching the screen
-    void ClickMode () {
-        StateMachine TSM = StateMachine (SM.timeWhenStateChanged, SM.currentState);
+    void DefaultStatesTemplate () {
+        /************************ initialize SAMPLE state objects ************************/
         
-        State do_nothing = State ();
-        StateF stop (this, & Navigator :: StopVehicle, 1.0); // stopTime
+        // FYI the (& Navigator :: FunctionName) syntax is used to create a pointer to a function existing within a navigator object; the spaces are for style
+        State       * do_nothing = new State ();
+        StateVoid   * wait_for_Light = new StateVoid (this, & Navigator :: WaitForLight);
         
-        if (!IS_SIMULATION) {
-            TSM.Add (  & do_nothing   );
-        }
+        StateVFF    * move_distance = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 35, 6.0); // direction, power, distance
+        StateVFF    * move_duration = new StateVFF (this, & Navigator :: MoveDuration, Vector.EF, 35, 1.0); // direction, power, duration
+        StateVFI    * move_bump = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 35, D0); // direction, power, bumpID
+        StateVFFI   * move_bump_duration = new StateVFFI (this, & Navigator :: MoveUntilBumpDuration, Vector.D, 35, 3.0, D1);  // direction, power, duration, bumpID
         
-        // Vector2 coordinate = lastTouchCoordinate;
-        if (touchState && touch.x > course.pos.x) {
-            lastTouchCoordinate = Vector2 (touch.x, touch.y);
-            lastTouchCoordinate = course.FromRealGlobalPosition (lastTouchCoordinate);
-            lastTouchCoordinate = Vector2 (lastTouchCoordinate.x, lastTouchCoordinate.y + 72);
-            
-            ResetMoveDistance ();
-        }
+        StateFF     * turn_clockwise = new StateFF (this, & Navigator :: TurnCW, 45, 35); // degrees, power
+        StateFFI    * turn_clockwise_bump = new StateFFI (this, & Navigator :: TurnUntilBumpCW, 45, 35, D0); // maxDegrees, power, bumpID
         
-        StateVFF moveCoordinate (this, & Navigator :: MoveToCoordinate, lastTouchCoordinate, 50, 0.0); // coordinate, power, distanceError
+        StateVFFII  * move_while_flush = new StateVFFII (this, & Navigator :: MoveWhileFlushDuration, Vector.E, 35, 4.20, F0, F1); // direction, power, duration, bump0, bump1
+        StateFF     * set_servo_angle = new StateFF (this, & Navigator :: SetServoAngle, 90, 1.0); // degrees, waitTime
         
-        // TSM.Add (  & do_nothing   ); // the do nothing state should always be the first state (state [0])
-        // TSM.Add (  & stop   );
+        StateVFFFF  * global_move_while_turning_until_above_Y = new StateVFFFF (this, & Navigator :: GlobalMoveWhileTurningUntilAboveY, Vector2 (3, 1).getUnitVector (), 50, 50, 10, 40); // direction, power, timeOutDuration, turnPower, yValue
+        StateVFFF   * global_move_until_above_Y = new StateVFFF (this, & Navigator :: GlobalMoveUntilAboveY, Vector.up, 35, 15.0, 40); // direction, power, timeOutDuration, yValue
+        StateVFFF   * global_move_while_turning = new StateVFFF (this, & Navigator :: GlobalMoveWhileTurningDuration, Vector.up, 35, 1.0, 30); // direction, power, duration, turnPower
+        StateVFF    * move_to_coordinate = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (10.0, 10.0), 35,  0.0); // coordinate, power, distanceError
+        StateFF     * rotate_to_global_angle = new StateFF (this, & Navigator :: RotateToGlobalAngle, 30, 50); // degrees, power
         
-        if (!IS_SIMULATION) {
-            TSM.Add (  & moveCoordinate   );
-            
-            TSM.Add (  & stop   );
-            TSM.Add (  & stop   );
-        } else {
-            if (touchState) {
-                TSM.Add (  & moveCoordinate   );
-            } else {
-                TSM.Add (  & stop   );
-            }
-        }
-        
-        TSM.Update ();
-        
-        SM = StateMachine (TSM.timeWhenStateChanged, TSM.currentState);
+        StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
     }
     
     // perform all of the navigation procedures associated with state machine test
     void Tester () {
-        /*
-         * This is set up so that all the information except the state data itself is stored in the SM statemachine.
-         * This includes the currentState and time when the state was last changed.
-         * This non-state data is transfered into a temporary state machine (TSM), in which all the actual state data is then manually added.
-         * This temporary state machine is then updated (which calls the function associated with the current state).
-         * The non-state data in the tempory state machine is then transfered back into SM, so any state transition information is noted.
-         * This is all really inefficent, but it is the easiest way to solve a memory leak issue I was having.
-         */
+        /************************ initialize state objects ************************/
         
-        StateMachine TSM = StateMachine (SM.timeWhenStateChanged, SM.currentState); // transfer non-state data into a temporary state machine
-        
-        
-        /************************ initialize SAMPLE state objects ************************/
-        
-        // FYI the (& Navigator :: FunctionName) syntax is used to create a pointer to a function existing within a navigator object; the spaces are for style
-        State do_nothing = State (); // this syntax is different than the other because the compiler would otherwise think this is a method declaration (other than that, the syntax is essentially equivalent)
-        StateVoid wait_for_Light (this, & Navigator :: WaitForLight);
-        
-        StateVFF move_duration (this, & Navigator :: MoveDuration, Vector.EF, 35, 1.0); // direction, power, duration
-        StateVFF move_distance (this, & Navigator :: MoveDistance, Vector.EF, 35, 6.0); // direction, power, distance
-        StateVFI move_bump (this, & Navigator :: MoveUntilBump, Vector.D, 35, D0); // direction, power, bumpID
-        StateVFFI move_bump_duration (this, & Navigator :: MoveUntilBumpDuration, Vector.D, 35, 3.0, D1);  // direction, power, duration, bumpID
-        
-        StateFF turn_clockwise (this, & Navigator :: TurnCW, 45, 35); // degrees, power
-        StateFFI turn_clockwise_bump (this, & Navigator :: TurnUntilBumpCW, 45, 35, D0); // maxDegrees, power, bumpID
-        
-        StateVFFF global_move_until_above_Y (this, & Navigator :: GlobalMoveUntilAboveY, Vector.up, 35, 15.0, 40); // direction, power, timeOutDuration, yValue
-        StateVFFF global_move_while_turning (this, & Navigator :: GlobalMoveWhileTurningDuration, Vector.up, 35, 1.0, 30); // direction, power, duration, turnPower
-        StateVFF move_to_coordinate (this, & Navigator :: MoveToCoordinate, Vector2 (10.0, 10.0), 35,  0.0); // coordinate, power, distanceError
-        StateFF rotate_to_global_angle (this, & Navigator :: RotateToGlobalAngle, 30, 50); // degrees, power
-        
-        StateVFFII move_while_flush (this, & Navigator :: MoveWhileFlushDuration, Vector.E, 35, 4.20, F0, F1); // direction, power, duration, bump0, bump1
-        StateFF set_servo_angle (this, & Navigator :: SetServoAngle, 110, 1.0); // degrees, waitTime
-        
-        StateF stop (this, & Navigator :: StopVehicle, 1.0); // stopTime
-        
-        
-        /************************ initialize OTHER state objects ************************/
-        
-        StateFF turnSome (this, & Navigator :: TurnCW, 30, 50); // degrees, power
-        StateVFF moveSome (this, & Navigator :: MoveDistance, Vector.Aa, 50, 12.0); // direction, power, duration // .Aa
-        StateVFF moveSomeMore (this, & Navigator :: MoveDistance, Vector.Bb, 50, 12.0); // direction, power, duration // .Bb
-        // StateVFI moveUntilSomeBump (this, & Navigator :: MoveUntilBump, GetGlobalVector (Vector.down), 35, D0); // direction, power, bumpID ... Bb
-        
-        StateVFF moveGlobal (this, & Navigator :: GlobalMoveDuration, Vector.up, 35, 50.0);; // direction, power, duration
-        StateVFFF moveGlobalTurning (this, & Navigator :: GlobalMoveWhileTurningDuration, Vector.up, 35, 50.0, 30); // direction, power, duration, turnPower
-        StateVFF moveCoordinate (this, & Navigator :: MoveToCoordinate, Vector2 (10.0, 10.0), 50, 0.0); // coordinate, power, distanceError
-        StateVFFF moveGlobalUntilY (this, & Navigator :: GlobalMoveUntilAboveY, Vector.up, 35, 15.0, 40); // direction, power, timeOutDuration, yValue
+        State       * do_nothing = new State ();
+        StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
+        StateFF     * turnALittle = new StateFF (this, & Navigator :: TurnCW, 45, 35); // degrees, power
 
-
-        /************************ ADD REFERENCES of all of the state objects to the temporary state machine ************************/
         
-        // note you have to start this new state machine using the GUI button (or at least that's how it's currently set up)
-        TSM.Add (  & do_nothing   ); // the do nothing state should always be the first state (state [0])
+        /************************ ADD REFERENCES of all of the state objects to the state machine ************************/
+        
+        // add the do nothing state, which should always be the first state (state [0])
+        SM.Add (  do_nothing   );
+        
         
         // TSM.Add (  & turn_clockwise   );
-        TSM.Add (  & stop   );
-        TSM.Add (  & rotate_to_global_angle   );
-        TSM.Add (  & stop   );
-        TSM.Add (  & stop   );
-        
-        TSM.Add (  & stop   ); // probably always a good idea to include a stop function at the end
+        SM.Add (  stop   );
+        SM.Add (  turnALittle   );
+        SM.Add (  stop   );
+        SM.Add (  stop   );
         
         
-        TSM.Update ();
-        
-        SM = StateMachine (TSM.timeWhenStateChanged, TSM.currentState); // transfer tempary non-state data into the real state machine
+        // perform the final stop
+        SM.Add (  stop   );
     }
     
     
-    // perform all of the navigation procedures associatedw ith performance test four
-    void PerformanceTestFourD1 () {
-        /*
-         * This is set up so that all the information except the state data itself is stored in the SM statemachine.
-         * This includes the currentState and time when the state was last changed.
-         * This non-state data is transfered into a temporary state machine (TSM), in which all the actual state data is then manually added.
-         * This temporary state machine is then updated (which calls the function associated with the current state).
-         * The non-state data in the tempory state machine is then transfered back into SM, so any state transition information is noted.
-         * This is all really inefficent, but it is the easiest way to solve a memory leak issue I was having.
-         */
+    
+    // initalize complete navigation procedures that indirectly add states to the statemachine by calling other methods
+    /************************************************ FULL NAVIGATION PROCEDURES ************************************************/
+    
+    void PerformanceTestFour () {
+        InitialState ();
+        GetToDDR ();
+        DoDDR ();
+        GetUpRamp ();
+        GetToFoosball ();
+        DoFoosball ();
+        GetDownRamp ();
+        GoPressFinalButton ();
+    }
+    
+    
+    
+    
+    // initalize chunks of navigation procedures that directly add states to the statemachine
+    /************************************************ FULL NAVIGATION PROCEDURE CHUNKS ************************************************/
+
+    
+    /*
+     * Initialize the initial states, where the robot waits for the GUI start button to be pressed, then waits for the start light to turn on.
+     */
+    void InitialState () {
+        // *********** INITIALIZE state objects *********** //
         
-        StateMachine TSM = StateMachine (SM.timeWhenStateChanged, SM.currentState); // transfer non-state data into a temporary state machine
+        StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
+        State       * do_nothing = new State ();
+        StateVoid   * wait_for_Light = new StateVoid (this, & Navigator :: WaitForLight);
+
         
+        // *********** ADD REFERENCES of state objects to state machine *********** //
         
-        /************************ initialize SAMPLE state objects ************************/
+        // add the do nothing state, which should always be the first state (state [0])
+        SM.Add (  do_nothing  );
+        SM.Add (  wait_for_Light  );
+    }
+    
+    
+    /*
+     * START: The robot is at its starting position.
+     * END: The robot is on the light at the DDR pad.
+     */
+    void GetToDDR () {
+        // *********** INITIALIZE state objects *********** //
         
-        // FYI the (& Navigator :: FunctionName) syntax is used to create a pointer to a function existing within a navigator object; the spaces are for style
-        State do_nothing = State (); // this syntax is different than the other because the compiler would otherwise think this is a method declaration (other than that, the syntax is essentially equivalent)
-        StateVoid wait_for_Light (this, & Navigator :: WaitForLight);
+        StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
+        StateVFF    * initial_move = new StateVFF (this, & Navigator :: MoveDuration, Vector.F, 35, 0.8); // direction, power, duration
+        StateFF     * initial_turn = new StateFF (this, & Navigator :: TurnCW, 135, 50); // degrees, power // increased from 35
+        StateVFF    * move_duration_DE = new StateVFF (this, & Navigator :: MoveDuration, Vector.DE, 35, 2.9-0.45); // direction, power, duration
+
         
-        StateVFF move_distance (this, & Navigator :: MoveDistance, Vector.EF, 35, 6.0); // direction, power, distance
-        StateVFF move_duration (this, & Navigator :: MoveDuration, Vector.EF, 35, 1.0); // direction, power, duration
-        StateVFI move_bump (this, & Navigator :: MoveUntilBump, Vector.D, 35, D0); // direction, power, bumpID
-        StateVFFI move_bump_duration (this, & Navigator :: MoveUntilBumpDuration, Vector.D, 35, 3.0, D1);  // direction, power, duration, bumpID
+        // *********** ADD REFERENCES of state objects to state machine *********** //
         
-        StateFF turn_clockwise (this, & Navigator :: TurnCW, 45, 35); // degrees, power
-        StateFFI turn_clockwise_bump (this, & Navigator :: TurnUntilBumpCW, 45, 35, D0); // maxDegrees, power, bumpID
+        SM.Add (  initial_move  );
+        SM.Add (  stop  );
+        SM.Add (  initial_turn  );
+        SM.Add (  stop  );
+        SM.Add (  move_duration_DE  );
+        SM.Add (  stop  );
+    }
+    
+    
+    /*
+     * START: The robot is on the light at the DDR pad.
+     * END: The robot is at the DDR pad.
+     */
+    void DoDDR () {
+        // *********** INITIALIZE state objects *********** //
         
-        StateVFFII move_while_flush (this, & Navigator :: MoveWhileFlushDuration, Vector.E, 35, 4.20, F0, F1); // direction, power, duration, bump0, bump1
-        StateFF set_servo_angle (this, & Navigator :: SetServoAngle, 110, 1.0); // degrees, waitTime
+        StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
+        StateVFF    * gather_up_min_lightValue = new StateVFF (this, & Navigator :: MoveToGetMinLightValue, Vector.DE, 35, 0.1); // direction, power, duration // MoveToGetMinLightValue
+        StateVoid   * blue_shift_using_min = new StateVoid (this, & Navigator :: MoveDurationBlueShiftUsingMin); //
+        // ****** fix ****** //
+        StateFF     * global_align_to_DDR = new StateFF (this, & Navigator :: RotateToGlobalAngle, -180, 50); // 179 // (hyp. works) 179+45 // no -135 ... so it is problem with the rotateToGlobal being not accurate
+        StateVFF    * move_button_F = new StateVFF (this, & Navigator :: MoveDuration, Vector.F, 35, 1.05); // direction, power, duration
+        StateF      * hold_button = new StateF (this, & Navigator :: StopVehicle, 5.0); // stopTime
+
         
-        // StateVFFFF global_move_while_turning_to_get_up_ramp (this, & Navigator :: GlobalMoveWhileTurningUntilAboveY, Vector2 (3, 1).getUnitVector (), 50, 50, 10, 40); // direction, power, timeOutDuration, turnPower, yValue
-        StateVFFF global_move_until_above_Y (this, & Navigator :: GlobalMoveUntilAboveY, Vector.up, 35, 15.0, 40); // direction, power, timeOutDuration, yValue
-        StateVFFF global_move_while_turning (this, & Navigator :: GlobalMoveWhileTurningDuration, Vector.up, 35, 1.0, 30); // direction, power, duration, turnPower
-        StateVFF move_to_coordinate (this, & Navigator :: MoveToCoordinate, Vector2 (10.0, 10.0), 35,  0.0); // coordinate, power, distanceError
-        StateFF rotate_to_global_angle (this, & Navigator :: RotateToGlobalAngle, 30, 50); // degrees, power
+        // *********** ADD REFERENCES of state objects to state machine *********** //
         
-        StateF stop (this, & Navigator :: StopVehicle, 1.0); // stopTime
+        SM.Add (  gather_up_min_lightValue  );
+        SM.Add (  blue_shift_using_min  );
+        //- SM.Add (  blue_shift_test  );
+        SM.Add (  stop  );
+        SM.Add (  global_align_to_DDR  ); // global_align_to_DDR // alignToDDR
+        SM.Add (  stop  );
+        SM.Add (   move_button_F  );
+        // SM.Add (   turn_clockwise  );
+        SM.Add (  hold_button  );
+        SM.Add (  stop  );
+        // SM.Add (   move_C_after  );
+    }
+    
+    
+    /*
+     * START: The robot is at the DDR pad.
+     * END: The robot is centered at the top of the ramp.
+     */
+    void GetUpRamp () {
+        // *********** INITIALIZE state objects *********** //
         
+        StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
+        StateVFF    * get_centered_on_ramp = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (30, 20.0), 50,  0.0); // coordinate, power, distanceError
+        // StateVFFF   * global_move_to_get_down_ramp = new StateVFFF (this, & Navigator :: GlobalMoveUntilBelowY, Vector.down, 65, 15.0, 18); // direction, power, timeOutDuration, yValue
+        // StateVFFF   * global_move_to_get_up_ramp = new State (this, & Navigator :: GlobalMoveUntilAboveY, Vector.up, 65, 15, 50); // direction, power, timeOutDuration, yValue // 20.0
+        // StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: GlobalMoveWhileTurningUntilAboveY, Vector2 (1, 4).getUnitVector (), 60, 60.0, 10, 50); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15
+        StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: GlobalMoveWhileTurningWithAbortUntilAboveY, Vector2 (1, 4).getUnitVector (), 80, 60.0, 10, 50-2); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15
+        StateFF     * align_to_global_angle_before_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 50);
+        // ****** fix ****** //
+        StateFF     * realign_to_global_angle_after_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 50); // degrees, power // 270 + angleOffset + 30 // -90 // 270
+        StateVFF    * get_centered_on_top_of_ramp_before_foosball = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (30, 52), 50,  0.0); // coordinate, power, distanceError
+
         
+        // *********** ADD REFERENCES of state objects to state machine *********** //
         
-        /************************ initialize OTHER state objects ************************/
-        
-        StateF stop_at_the_end (this, & Navigator :: StopVehicle, 0.01); // stopTime
-        StateVFF move_up_ramp_real_quick (this, & Navigator :: MoveDuration, Vector.E, 65, 1.0); // direction, power, duration
-        StateFF initial_turn (this, & Navigator :: TurnCW, 135, 35); // degrees, power
-        StateVoid do_DDR_stuff (this, & Navigator :: DoDDR);
-        StateVFF move_duration_DE (this, & Navigator :: MoveDuration, Vector.DE, 35, 2.9); // direction, power, duration
-        StateVFF initial_move (this, & Navigator :: MoveDuration, Vector.F, 35, 0.1); // direction, power, duration
-        StateVFF move_button_F (this, & Navigator :: MoveDuration, Vector.F, 35, 1.05); // direction, power, duration
-        StateVFF move_C_after (this, & Navigator :: MoveDuration, Vector.C, 35, 1.0); // direction, power, duration
-        StateF hold_button (this, & Navigator :: StopVehicle, 5.0); // stopTime
-        StateVFF move_blue_shift (this, & Navigator :: MoveDuration, Vector.DE, 35, 1.0); // direction, power, duration
-        StateVoid blue_shift_test(this, & Navigator :: MoveDurationBlueShift);
-        StateFF alignToDDR (this, & Navigator :: TurnCCW, 10, 35); // degrees, power
-        
-        // rotate to align with right wall
-        StateFF align_to_right_wall (this, & Navigator :: TurnCCW, 90, 35); // degrees, power
-        // move until touches right wall
-        StateVFI move_F_bump_FX (this, & Navigator :: MoveUntilBump, Vector.F, 35, F0); // direction, power, bumpID
-        // grind up ramp (for duration) (in a slight diagonal direction)
-        // StateVFF grind_up_ramp (this, & Navigator :: MoveDuration, Vector.getAverageUnitVector2(Vector.getAverageUnitVector2(Vector.E, Vector.DE), Vector.DE), 75, 3.6); // direction, power, duration // Vector.getAverageUnitVector2(Vector.getAverageUnitVector2(Vector.E, Vector.DE), Vector.DE))
-        // Vector2 GR = Vector2 (Vector.OldE.x, Vector.OldE.y);
-        // GR.Rotate(15);
-        // StateVFF grind_up_ramp (this, & Navigator :: MoveDuration, GR, 75, 3.6); // direction, power, duration // Vector.getAverageUnitVector2(Vector.getAverageUnitVector2(Vector.E, Vector.DE), Vector.DE))
-        StateVFI grind_up_ramp (this, & Navigator :: MoveWhileBump, Vector.DE, 75, F0); // direction, power, duration // Vector.getAverageUnitVector2(Vector.getAverageUnitVector2(Vector.E, Vector.DE), Vector.DE))
-        // straighten after getting off the ramp
-        StateFFI realign_after_ramp (this, & Navigator :: TurnUntilBumpCCW, 90, 35, F1); // maxDegrees, power, bump
-        StateVFF move_to_realign_after_ramp (this, & Navigator :: MoveDuration, Vector.F, 25, 0.25); // direction, power, duration // Vector.getAverageUnitVector2(Vector.getAverageUnitVector2(Vector.E, Vector.DE), Vector.DE))
-        StateFFI realign_after_ramp_2 (this, & Navigator :: TurnUntilBumpCW, 900, 35, F0); // maxDegrees, power, bump
-        StateVFF get_off_ramp (this, & Navigator :: MoveDistance, Vector.DE, 50, 30); // direction, power, duration // Vector.getAverageUnitVector2(Vector.getAverageUnitVector2(Vector.E, Vector.DE), Vector.DE))
-        StateVFI get_off_ramp_2 (this, & Navigator :: MoveUntilBump, Vector.DE, 25, D1);
-        StateVFF backtrack_from_foosball (this, & Navigator :: MoveDistance, Vector.Aa, 50, 13);
-        
-        // move until the front bump switch activates
-        StateVFI move_E_bump_D1 (this, & Navigator :: MoveUntilBump, Vector.E, 20, D1); // direction, power, bumpID
-        // move back a bit
-        StateVFF move_back_from_foosball (this, & Navigator :: MoveDuration, Vector.AB, 35, 0.1); // direction, power, duration
-        // move left a little
-        StateVFF move_to_align_to_foosball (this, & Navigator :: MoveDuration, Vector.C, 35, 0.875); // direction, power, duration // straight at 0.7
-        // rotate a little to align to foosball
-        StateFF turn_to_align_to_foosball (this, & Navigator :: TurnCW, 30, 35); // degrees, power
-        // move forward towards the foolsball disc to touch them
-        StateVFF touch_foosball (this, & Navigator :: MoveDuration, Vector.D, 35, 0.16); // direction, power, bumpID
-        // lower servo
-        StateFF lower_servo (this, & Navigator :: SetServoAngle, 30, 1.0); // degrees, waitTime
-        
-        // move to token
-        StateVFF move_left_to_token (this, & Navigator :: MoveDistance, Vector.C, 35, 0.1); // direction, power, distance // 5.0
-        StateVFF move_dir_to_token (this, & Navigator :: MoveDistance, Vector.BC, 35, 22); // direction, power, distance // 18.0
-        // move forward to token dispence
-        StateVFF move_forward_to_token (this, & Navigator :: MoveDistance, Vector.AB, 35, 8.0); // direction, power, distance // was 8.0
-        StateFF rotate_to_token (this, & Navigator :: TurnCCW, 180, 35); // degrees, power
-        StateVFF move_to_token_again (this, & Navigator :: MoveDistance, Vector.BC, 35, 1.4); // EF // was 2.0 // then 1.5
-        StateVFI touch_the_token (this, & Navigator :: MoveUntilBump, Vector.D, 35, D0); // direction, power, bumpID
-        StateVFF align_after_touching_token (this, & Navigator :: MoveDuration, Vector.D, 25, 0.1); // direction, power, duration
-        StateFFI align_after_touching_token_2 (this, & Navigator :: TurnUntilBumpCCW, 900, 35, D1);
-        StateVFF move_back_from_token (this, & Navigator :: MoveDistance, Vector.Aa, 35, 2.0); // EF // was 2.0 // then 1.5
-        
-        // new stuff for PT4
-        
-        float angleOffset = 0;
-        StateVFFF global_move_to_get_up_ramp (this, & Navigator :: GlobalMoveUntilAboveY, Vector.up, 65, 15.0, 50); // direction, power, timeOutDuration, yValue
-        StateVFFFF global_move_while_turning_to_get_up_ramp (this, & Navigator :: GlobalMoveWhileTurningUntilAboveY, Vector2 (1, 5).getUnitVector (), 35, 60.0, 10, 50); // direction, power, timeOutDuration, turnPower, yValue
-        StateFF realign_to_global_angle_after_ramp (this, & Navigator :: RotateToGlobalAngle, 270 + angleOffset, 50); // degrees, power
-        // lower servo more
-        // StateFF lower_servo_for_foosball (this, & Navigator :: SetServoAngle, 15, 1.0); // degrees, waitTime
-        
-        StateVFF drag_foosball_leftwards (this, & Navigator :: MoveDistance, Vector.BC, 35, 8.0); // EF // was 2.0 // then 1.5
-        // move back a bit
-        StateVFF move_back_from_foosball_again (this, & Navigator :: MoveDuration, Vector.Aa, 35, 0.1); // direction, power, duration
-        StateVFI move_right_after_foosball (this, & Navigator :: MoveUntilBump, Vector.EF, 30, F0); // direction, power, bumpID
-        
-        StateVFF move_down_to_get_to_ramp (this, & Navigator :: MoveDistance, Vector.Aa, 35, 18); // direction, power, distance
-        StateVFFF global_move_to_get_down_ramp (this, & Navigator :: GlobalMoveUntilBelowY, Vector.down, 65, 15.0, 18); // direction, power, timeOutDuration, yValue
-        StateVFI touch_DDR (this, & Navigator :: MoveUntilBump, Vector.Aa, 20, B0); // direction, power, bumpID
-        
-        /************************ ADD REFERENCES of all of the state objects to the temporary state machine ************************/
-        
-        // note you have to start this new state machine using the GUI button (or at least that's how it's currently set up)
-        TSM.Add (  & do_nothing   ); // the do nothing state should always be the first state (state [0])
-        TSM.Add (  & wait_for_Light   );
-        
-        
-        TSM.Add (  & initial_move   );
-        TSM.Add (  & stop   );
-        TSM.Add (  & initial_turn   );
-        TSM.Add (  & stop   );
-        TSM.Add (  & move_duration_DE   );
-        TSM.Add (  & stop   );
-        
-        // rotate to align with right wall
-        TSM.Add ( & align_to_right_wall );
-        TSM.Add ( & stop );
-        // move to wall using bump
-        // TSM.Add ( & move_F_bump_FX ); // state 10
+        SM.Add (  get_centered_on_ramp  ); // state 10
+        SM.Add (  stop  );
+        SM.Add (  align_to_global_angle_before_ramp  );
+        SM.Add (  stop  );
         
         // get up the ramp good
-        // TSM.Add ( & global_move_to_get_up_ramp );
-        TSM.Add ( & global_move_while_turning_to_get_up_ramp );
-        TSM.Add ( & stop );
-        TSM.Add ( & realign_to_global_angle_after_ramp );
-        TSM.Add ( & stop );
-        // move to wall again using bump
-        TSM.Add ( & move_F_bump_FX ); // uses same state twice presently
+        // SM.Add (  global_move_to_get_up_ramp  );
+        SM.Add (  global_move_while_turning_to_get_up_ramp  );
+        SM.Add (  stop  ); // get_centered_on_top_of_ramp_before_foosball
+        SM.Add (  get_centered_on_top_of_ramp_before_foosball  );
+        SM.Add (  stop  );
+        SM.Add (  realign_to_global_angle_after_ramp  );
+        SM.Add (  stop  );
+    }
+    
+    
+    /*
+     * START: The robot is centered at the top of the ramp.
+     * END: The robot is snuggly at the corner formed by the foosball box and the right wall.
+     */
+    void GetToFoosball () {
+        // *********** INITIALIZE state objects *********** //
         
-        /*
-        // grind up ramp (for duration) (in a slight diagonal direction)
-        TSM.Add ( & grind_up_ramp );
-        TSM.Add ( & stop );
-        TSM.Add ( & realign_after_ramp );
-        TSM.Add ( & stop );
-        TSM.Add ( & move_to_realign_after_ramp );
-        TSM.Add ( & realign_after_ramp_2 );
-        TSM.Add ( & stop );
-        TSM.Add ( & get_off_ramp );
-        TSM.Add ( & get_off_ramp_2 ); // get_off_ramp_2
-        TSM.Add ( & stop );
-        // may do more alignment stuff here
-        TSM.Add ( & backtrack_from_foosball ); // state 21
-        TSM.Add ( & stop );
-        */
-        
+        StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
+        // move until touches right wall
+        StateVFI    * move_F_bump_FX = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.F, 35, F0); // direction, power, bumpID
         // move until the front bump switch activates
-        TSM.Add ( & move_E_bump_D1 );
-        TSM.Add ( & stop );
+        StateVFI    * move_E_bump_D1 = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.E, 40, D1); // direction, power, bumpID
+        
+
+        // *********** ADD REFERENCES of state objects to state machine *********** //
+        
+        // move to wall again using bump
+        SM.Add (  move_F_bump_FX  );
+        // move until the front bump switch activates
+        SM.Add (  move_E_bump_D1  );
+        SM.Add (  stop  );
+    }
+    
+    
+    /*
+     * START: The robot is snuggly at the corner formed by the foosball box and the right wall.
+     * END: The robot is somewhere around the corner formed by the foosball box and the right wall (after completing the foosball task).
+     */
+    void DoFoosball () {
+        // *********** INITIALIZE state objects *********** //
+        
+        StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
+        StateFF     * raise_servo = new StateFF (this, & Navigator :: SetServoAngle, RAISED_SERVO_ANGLE, 1.0); // degrees, waitTime
+        // StateFF     * lower_servo = new StateFF (this, & Navigator :: SetServoAngle, RAISED_SERVO_ANGLE, 1.0); // degrees, waitTime
+        StateFF     * lower_servo_for_foosball_drag = new StateFF (this, & Navigator :: SetServoAngle, LOWERED_SERVO_ANGLE, 1.0); // degrees, waitTime
+        
         // move back a bit
-        TSM.Add ( & move_back_from_foosball );
-        TSM.Add ( & stop );
+        StateVFF    * move_back_from_foosball = new StateVFF (this, & Navigator :: MoveDuration, Vector.AB, 35, 0.1); // direction, power, duration
         // move left a little
-        TSM.Add ( & move_to_align_to_foosball );
-        TSM.Add ( & stop );
-        // rotate
-        TSM.Add ( & turn_to_align_to_foosball );
-        TSM.Add ( & stop );
+        StateVFF    * move_to_align_to_foosball = new StateVFF (this, & Navigator :: MoveDuration, Vector.C, 35, 0.875); // direction, power, duration // straight at 0.7
+        // rotate a little to align to foosball
+        StateFF     * turn_to_align_to_foosball = new StateFF (this, & Navigator :: TurnCW, 30+5, 35); // degrees, power // 30-5
         // move forward towards the foolsball disc to touch them
-        TSM.Add ( & touch_foosball );
-        TSM.Add ( & stop );
-        TSM.Add ( & drag_foosball_leftwards );
-        TSM.Add ( & stop );
+        StateVFF    * move_to_touch_foosball = new StateVFF (this, & Navigator :: MoveDuration, Vector.D, 35, 0.12); // direction, power // 0.16 // .25 // 0.20
+        // drag foosball leftwards
+        // StateFF     * turn_while_dragging_foosball = new StateFF (this, & Navigator :: TurnCCW, 30-5, 35); // degrees, power
+        // StateVFF    * drag_foosball_leftwards = new StateVFF (this, & Navigator :: MoveDistance, Vector.BC, 35, 11.5); // EF // was 2.0 // then 1.5
+        StateVFFF   * drag_foosball_leftwards = new StateVFFF (this, & Navigator :: MoveWhileTurningDuration, Vector.BC, 35, 1.6, 5); // EF // was 2.0 // then 1.5 // 20 // -20 // 2.0 // 10
+        
+        // push the foosball discs again
+        StateVFF    * move_right_before_push = new StateVFF (this, & Navigator :: MoveDuration, Vector.EF, 35, 1.0); // direction, power // 0.16 // .25 // 0.20
+        StateVFFF   * push_foosball_leftwards = new StateVFFF (this, & Navigator :: MoveWhileTurningDuration, Vector.BC, 35, 1.0-0.15, 2); // EF // was 2.0 // then 1.5 // 20 // -20 // 2.0 // 10
+        StateFF     * lower_servo_for_foosball_push = new StateFF (this, & Navigator :: SetServoAngle, LOWERED_SERVO_ANGLE - 5.0, 1.0); // degrees, waitTime
+
+        // move back a bit
+        StateVFF    * move_back_from_foosball_again = new StateVFF (this, & Navigator :: MoveDuration, Vector.Aa, 35, 0.3); // direction, power, duration
+        // straighten
+        StateFF     * straighten_after_foosball = new StateFF (this, & Navigator :: TurnCW, 1, 35); // degrees, power // 35
+        StateVFI    * move_right_after_foosball = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.EF, 30, F0); // direction, power, bumpID
+
+        
+        // *********** ADD REFERENCES of state objects to state machine *********** //
+        
+        // move back a bit
+        SM.Add (  move_back_from_foosball  );
+        SM.Add (  stop  );
+        // move left a little
+        SM.Add (  move_to_align_to_foosball  );
+        SM.Add (  stop  );
+        // rotate
+        SM.Add (  turn_to_align_to_foosball  );
+        SM.Add (  stop  );
+        // move forward towards the foolsball disc to touch them
+        SM.Add (  move_to_touch_foosball  );
+        SM.Add (  stop  );
+        //move the servo arm ... lower_servo_for_foosball
+        SM.Add (  lower_servo_for_foosball_drag  );
+        SM.Add (  stop  );
+        SM.Add (  drag_foosball_leftwards  );
+        SM.Add (  stop  );
+
+        // go back and drag (or push) the servo a second time
+        SM.Add (  raise_servo  );
+        SM.Add (  stop  );
+        // move parrallel to the bar
+        SM.Add (  move_right_before_push  );
+        SM.Add (  stop  );
+        // lower servo
+        SM.Add (  lower_servo_for_foosball_push  );
+        SM.Add (  stop  );
+        // push again
+        SM.Add (  push_foosball_leftwards  );
+        SM.Add (  stop  );
         
         // leave foosball
-        TSM.Add ( & move_back_from_foosball_again );
-        TSM.Add ( & stop );
-        TSM.Add ( & move_right_after_foosball );
-        TSM.Add ( & stop );
-        TSM.Add ( & move_down_to_get_to_ramp );
-        TSM.Add ( & global_move_to_get_down_ramp );
-        TSM.Add ( & touch_DDR );
-        TSM.Add ( & stop );
-        // TSM.Add ( & stop );
-        // TSM.Add ( & stop );
-        // TSM.Add ( & stop );
-        
-        TSM.Add (  & stop_at_the_end   ); // probably always a good idea to include a stop function at the end
-        
-        
-        TSM.Update ();
-        
-        SM = StateMachine (TSM.timeWhenStateChanged, TSM.currentState); // transfer tempary non-state data into the real state machine
+        SM.Add (  raise_servo  );
+        SM.Add (  move_back_from_foosball_again  );
+        SM.Add (  stop  );
+        SM.Add (  straighten_after_foosball  );
+        SM.Add (  stop  );
+        SM.Add (  move_right_after_foosball  );
+        SM.Add (  stop  );
     }
     
     
-    // perform all of the navigation procedures associated with performance test three
-    void PerformanceTestThreeD1 () {
-        /*
-         * This is set up so that all the information except the state data itself is stored in the SM statemachine.
-         * This includes the currentState and time when the state was last changed.
-         * This non-state data is transfered into a temporary state machine (TSM), in which all the actual state data is then manually added.
-         * This temporary state machine is then updated (which calls the function associated with the current state).
-         * The non-state data in the tempory state machine is then transfered back into SM, so any state transition information is noted.
-         * This is all really inefficent, but it is the easiest way to solve a memory leak issue I was having.
-         */
+    /*
+     * START: The robot is snuggly at the corner formed by the foosball box and the right wall.
+     * END: The robot is at the bottom of the ramp.
+     */
+    void GetDownRamp () {
+        // *********** INITIALIZE state objects *********** //
         
-        StateMachine TSM = StateMachine (SM.timeWhenStateChanged, SM.currentState); // transfer non-state data into a temporary state machine
-        
-        
-        /************************ initialize SAMPLE state objects ************************/
-        
-        // FYI the (& Navigator :: FunctionName) syntax is used to create a pointer to a function existing within a navigator object; the spaces are for style
-        State do_nothing = State (); // this syntax is different than the other because the compiler would otherwise think this is a method declaration (other than that, the syntax is essentially equivalent)
-        StateVoid wait_for_Light (this, & Navigator :: WaitForLight);
-        
-        StateVFF move_distance (this, & Navigator :: MoveDistance, Vector.EF, 35, 6.0); // direction, power, distance
-        StateVFF move_duration (this, & Navigator :: MoveDuration, Vector.EF, 35, 1.0); // direction, power, duration
-        StateVFI move_bump (this, & Navigator :: MoveUntilBump, Vector.D, 35, D0); // direction, power, bumpID
-        StateVFFI move_bump_duration (this, & Navigator :: MoveUntilBumpDuration, Vector.D, 35, 3.0, D1);  // direction, power, duration, bumpID
-        
-        StateFF turn_clockwise (this, & Navigator :: TurnCW, 45, 35); // degrees, power
-        StateFFI turn_clockwise_bump (this, & Navigator :: TurnUntilBumpCW, 45, 35, D0); // maxDegrees, power, bumpID
-        
-        StateVFFII move_while_flush (this, & Navigator :: MoveWhileFlushDuration, Vector.E, 35, 4.20, F0, F1); // direction, power, duration, bump0, bump1
-        StateFF set_servo_angle (this, & Navigator :: SetServoAngle, 110, 1.0); // degrees, waitTime
-        
-        StateF stop (this, & Navigator :: StopVehicle, 1.0); // stopTime
-        
-        
-        
-        /************************ initialize OTHER state objects ************************/
-        
-        StateF stop_at_the_end (this, & Navigator :: StopVehicle, 0.01); // stopTime
-        StateVFF move_up_ramp_real_quick (this, & Navigator :: MoveDuration, Vector.E, 65, 1.0); // direction, power, duration
-        StateFF initial_turn (this, & Navigator :: TurnCW, 135, 35); // degrees, power
-        StateVoid do_DDR_stuff (this, & Navigator :: DoDDR);
-        StateVFF move_duration_DE (this, & Navigator :: MoveDuration, Vector.DE, 35, 2.9); // direction, power, duration
-        StateVFF initial_move (this, & Navigator :: MoveDuration, Vector.F, 35, 0.1); // direction, power, duration
-        StateVFF move_button_F (this, & Navigator :: MoveDuration, Vector.F, 35, 1.05); // direction, power, duration
-        StateVFF move_C_after (this, & Navigator :: MoveDuration, Vector.C, 35, 1.0); // direction, power, duration
-        StateF hold_button (this, & Navigator :: StopVehicle, 5.0); // stopTime
-        StateVFF move_blue_shift (this, & Navigator :: MoveDuration, Vector.DE, 35, 1.0); // direction, power, duration
-        StateVoid blue_shift_test(this, & Navigator :: MoveDurationBlueShift);
-        StateFF alignToDDR (this, & Navigator :: TurnCCW, 10, 35); // degrees, power
-        
-        // rotate to align with right wall
-        StateFF align_to_right_wall (this, & Navigator :: TurnCCW, 90, 35); // degrees, power
-        // move until touches right wall
-        StateVFI move_F_bump_FX (this, & Navigator :: MoveUntilBump, Vector.F, 35, F0); // direction, power, bumpID
-        // grind up ramp (for duration) (in a slight diagonal direction)
-        // StateVFF grind_up_ramp (this, & Navigator :: MoveDuration, Vector.getAverageUnitVector2(Vector.getAverageUnitVector2(Vector.E, Vector.DE), Vector.DE), 75, 3.6); // direction, power, duration // Vector.getAverageUnitVector2(Vector.getAverageUnitVector2(Vector.E, Vector.DE), Vector.DE))
-        // Vector2 GR = Vector2 (Vector.OldE.x, Vector.OldE.y);
-        // GR.Rotate(15);
-        // StateVFF grind_up_ramp (this, & Navigator :: MoveDuration, GR, 75, 3.6); // direction, power, duration // Vector.getAverageUnitVector2(Vector.getAverageUnitVector2(Vector.E, Vector.DE), Vector.DE))
-        StateVFI grind_up_ramp (this, & Navigator :: MoveWhileBump, Vector.DE, 75, F0); // direction, power, duration // Vector.getAverageUnitVector2(Vector.getAverageUnitVector2(Vector.E, Vector.DE), Vector.DE))
-        // straighten after getting off the ramp
-        StateFFI realign_after_ramp (this, & Navigator :: TurnUntilBumpCCW, 90, 35, F1); // maxDegrees, power, bump
-        StateVFF move_to_realign_after_ramp (this, & Navigator :: MoveDuration, Vector.F, 25, 0.25); // direction, power, duration // Vector.getAverageUnitVector2(Vector.getAverageUnitVector2(Vector.E, Vector.DE), Vector.DE))
-        StateFFI realign_after_ramp_2 (this, & Navigator :: TurnUntilBumpCW, 900, 35, F0); // maxDegrees, power, bump
-        StateVFF get_off_ramp (this, & Navigator :: MoveDistance, Vector.DE, 50, 30); // direction, power, duration // Vector.getAverageUnitVector2(Vector.getAverageUnitVector2(Vector.E, Vector.DE), Vector.DE))
-        StateVFI get_off_ramp_2 (this, & Navigator :: MoveUntilBump, Vector.DE, 25, D1);
-        StateVFF backtrack_from_foosball (this, & Navigator :: MoveDistance, Vector.Aa, 50, 13);
+        StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
+        StateVFF    * move_down_to_get_to_ramp = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 35, 16); // direction, power, distance // 18
+        StateVFFF   * global_move_to_get_down_ramp = new StateVFFF (this, & Navigator :: GlobalMoveUntilBelowY, Vector.down, 80, 15.0, 22); // direction, power, timeOutDuration, yValue // 65
+        // StateVFF    * global_move_to_get_down_ramp = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (28.5, 15), 50,  0.0); // coordinate, power, distanceError
+        StateVFF    * get_centered_on_top_of_ramp = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (32, 52), 50,  0.0); // coordinate, power, distanceError // 30, 52
+        StateFF     * make_two_wheels_face_down_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -60 + 0 - 10, 50); // degrees, power
 
-        // move until the front bump switch activates
-        StateVFI move_E_bump_D1 (this, & Navigator :: MoveUntilBump, Vector.E, 20, D1); // direction, power, bumpID
-        // move back a bit
-        StateVFF move_back_from_foosball (this, & Navigator :: MoveDuration, Vector.AB, 35, 0.1); // direction, power, duration
-        // move left a little
-        StateVFF move_to_align_to_foosball (this, & Navigator :: MoveDuration, Vector.C, 35, 0.875); // direction, power, duration // straight at 0.7
-        // rotate a little to align to foosball
-        StateFF turn_to_align_to_foosball (this, & Navigator :: TurnCW, 30, 35); // degrees, power
-        // move forward towards the foolsball disc to touch them
-        StateVFF touch_foosball (this, & Navigator :: MoveDuration, Vector.D, 35, 0.16); // direction, power, bumpID
-        // lower servo
-        StateFF lower_servo (this, & Navigator :: SetServoAngle, 30, 1.0); // degrees, waitTime
         
-        // move to token
-        StateVFF move_left_to_token (this, & Navigator :: MoveDistance, Vector.C, 35, 0.1); // direction, power, distance // 5.0
-        StateVFF move_dir_to_token (this, & Navigator :: MoveDistance, Vector.BC, 35, 22); // direction, power, distance // 18.0
-        // move forward to token dispence
-        StateVFF move_forward_to_token (this, & Navigator :: MoveDistance, Vector.AB, 35, 8.0); // direction, power, distance // was 8.0
-        StateFF rotate_to_token (this, & Navigator :: TurnCCW, 180, 35); // degrees, power
-        StateVFF move_to_token_again (this, & Navigator :: MoveDistance, Vector.BC, 35, 1.4); // EF // was 2.0 // then 1.5
-        StateVFI touch_the_token (this, & Navigator :: MoveUntilBump, Vector.D, 35, D0); // direction, power, bumpID
-        StateVFF align_after_touching_token (this, & Navigator :: MoveDuration, Vector.D, 25, 0.1); // direction, power, duration
-        StateFFI align_after_touching_token_2 (this, & Navigator :: TurnUntilBumpCCW, 900, 35, D1);
-        StateVFF move_back_from_token (this, & Navigator :: MoveDistance, Vector.Aa, 35, 2.0); // EF // was 2.0 // then 1.5
+        // *********** ADD REFERENCES of state objects to state machine *********** //
         
-        
-        
-        /************************ ADD REFERENCES of all of the state objects to the temporary state machine ************************/
-        
-        // note you have to start this new state machine using the GUI button (or at least that's how it's currently set up)
-        TSM.Add (  & do_nothing   ); // the do nothing state should always be the first state (state [0])
-        TSM.Add (  & wait_for_Light   );
-        
-        
-        TSM.Add (  & initial_move   );
-        TSM.Add (  & stop   );
-        TSM.Add (  & initial_turn   );
-        TSM.Add (  & stop   );
-        TSM.Add (  & move_duration_DE   );
-        TSM.Add (  & stop   );
-        
-        // rotate to align with right wall
-        TSM.Add ( & align_to_right_wall );
-        TSM.Add ( & stop );
-        // move to wall using bump
-        TSM.Add ( & move_F_bump_FX ); // state 10
-        // grind up ramp (for duration) (in a slight diagonal direction)
-        TSM.Add ( & grind_up_ramp );
-        TSM.Add ( & stop );
-        TSM.Add ( & realign_after_ramp );
-        TSM.Add ( & stop );
-        TSM.Add ( & move_to_realign_after_ramp );
-        TSM.Add ( & realign_after_ramp_2 );
-        TSM.Add ( & stop );
-        TSM.Add ( & get_off_ramp );
-        TSM.Add ( & get_off_ramp_2 ); // get_off_ramp_2
-        TSM.Add ( & stop );
-        // may do more alignment stuff here
-        TSM.Add ( & backtrack_from_foosball ); // state 21
-        TSM.Add ( & stop );
-        //TSM.Add ( & stop );
-        //TSM.Add ( & stop );
-        
-        TSM.Add ( & move_left_to_token );
-        TSM.Add ( & move_dir_to_token );
-        TSM.Add ( & move_forward_to_token );
-        TSM.Add ( & stop );
-        TSM.Add ( & rotate_to_token );
-        TSM.Add ( & stop ); // move_to_token_again
-        TSM.Add ( & move_to_token_again );
-        TSM.Add ( & stop );
-
-        TSM.Add ( & touch_the_token );
-        TSM.Add ( & stop );
-        /*
-        TSM.Add ( & align_after_touching_token );
-        TSM.Add ( & stop );
-        TSM.Add ( & align_after_touching_token_2 );
-        TSM.Add ( & stop );
-        */
-        TSM.Add ( & move_back_from_token );
-        TSM.Add ( & stop );
-
-        TSM.Add ( & lower_servo );
-        
-        
-        TSM.Add (  & stop_at_the_end   ); // probably always a good idea to include a stop function at the end
-        
-        
-        TSM.Update ();
-        
-        SM = StateMachine (TSM.timeWhenStateChanged, TSM.currentState); // transfer tempary non-state data into the real state machine
+        SM.Add (  move_down_to_get_to_ramp  );
+        SM.Add (  stop  );
+        SM.Add (  get_centered_on_top_of_ramp  );
+        SM.Add (  stop  );
+        SM.Add (  make_two_wheels_face_down_ramp  );
+        SM.Add (  stop  );
+        SM.Add (  global_move_to_get_down_ramp  );
+        SM.Add (  stop  );
     }
+    
+    
+    /*
+     * START: The robot is at the bottom of the ramp.
+     * END: The robot is pressed against the final button.
+     */
+    void GoPressFinalButton () {
+        // *********** INITIALIZE state objects *********** //
+        
+        StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
+        StateVFF    * move_to_avoid_DDR = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (18, 14), 50,  0.0); // coordinate, power, distanceError // 6, 6
+        StateVFF    * go_touch_that_button = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (4, 3), 50,  0.0); // coordinate, power, distanceError // 6, 6
+        
+        // the final stop
+        StateF      * stop_at_the_end = new StateF (this, & Navigator :: StopVehicle, 0.01); // stopTime
 
-
-    // perform all of the navigation procedures associated with state machine test
-    void PerformanceTestTwoD1 () {
-        /*
-         * This is set up so that all the information except the state data itself is stored in the SM statemachine.
-         * This includes the currentState and time when the state was last changed.
-         * This non-state data is transfered into a temporary state machine (TSM), in which all the actual state data is then manually added.
-         * This temporary state machine is then updated (which calls the function associated with the current state).
-         * The non-state data in the tempory state machine is then transfered back into SM, so any state transition information is noted.
-         * This is all really inefficent, but it is the easiest way to solve a memory leak issue I was having.
-         */
-
-        StateMachine TSM = StateMachine (SM.timeWhenStateChanged, SM.currentState); // transfer non-state data into a temporary state machine
-
-
-        /************************ initialize SAMPLE state objects ************************/
-
-        // FYI the (& Navigator :: FunctionName) syntax is used to create a pointer to a function existing within a navigator object; the spaces are for style
-        State do_nothing = State (); // this syntax is different than the other because the compiler would otherwise think this is a method declaration (other than that, the syntax is essentially equivalent)
-        StateVoid wait_for_Light (this, & Navigator :: WaitForLight);
-
-        StateVFF move_duration (this, & Navigator :: MoveDuration, Vector.EF, 35, 1.0); // direction, power, duration
-        StateVFF move_distance (this, & Navigator :: MoveDistance, Vector.EF, 35, 6.0); // direction, power, distance
-        StateVFI move_bump (this, & Navigator :: MoveUntilBump, Vector.D, 35, D0); // direction, power, bumpID
-        StateVFFI move_bump_duration (this, & Navigator :: MoveUntilBumpDuration, Vector.D, 35, 3.0, D1);  // direction, power, duration, bumpID
-
-        StateFF turn_clockwise (this, & Navigator :: TurnCW, 45, 35); // degrees, power
-        StateFFI turn_clockwise_bump (this, & Navigator :: TurnUntilBumpCW, 45, 35, D0); // maxDegrees, power, bumpID
-
-        StateVFFII move_while_flush (this, & Navigator :: MoveWhileFlushDuration, Vector.E, 35, 4.20, F0, F1); // direction, power, duration, bump0, bump1
-        StateFF set_servo_angle (this, & Navigator :: SetServoAngle, 110, 1.0); // degrees, waitTime
-
-        StateF stop (this, & Navigator :: StopVehicle, 1.0); // stopTime
-
-
-
-        /************************ initialize OTHER state objects ************************/
-
-        StateF stop_at_the_end (this, & Navigator :: StopVehicle, 0.01); // stopTime
-        StateVFF move_up_ramp_real_quick (this, & Navigator :: MoveDuration, Vector.E, 65, 1.0); // direction, power, duration
-        StateFF initial_turn (this, & Navigator :: TurnCW, 135, 35); // degrees, power
-        StateVoid do_DDR_stuff (this, & Navigator :: DoDDR);
-        StateVFF move_duration_DE (this, & Navigator :: MoveDuration, Vector.DE, 35, 2.9); // direction, power, duration
-        StateVFF initial_move (this, & Navigator :: MoveDuration, Vector.F, 35, 0.1); // direction, power, duration
-        StateVFF move_button_F (this, & Navigator :: MoveDuration, Vector.F, 35, 1.05); // direction, power, duration
-        StateVFF move_C_after (this, & Navigator :: MoveDuration, Vector.C, 35, 1.0); // direction, power, duration
-        StateF hold_button (this, & Navigator :: StopVehicle, 5.0); // stopTime
-        StateVFF move_blue_shift (this, & Navigator :: MoveDuration, Vector.DE, 35, 1.0); // direction, power, duration
-        StateVoid blue_shift_test(this, & Navigator :: MoveDurationBlueShift);
-        StateFF alignToDDR (this, & Navigator :: TurnCCW, 10, 35); // degrees, power
-
-        // rotate to align with right wall
-        StateFF align_to_right_wall (this, & Navigator :: TurnCCW, 90, 35); // degrees, power
-        // move until touches right wall
-        StateVFI move_F_bump_FX (this, & Navigator :: MoveUntilBump, Vector.F, 35, F1); // direction, power, bumpID
-        // grind up ramp (for duration) (in a slight diagonal direction)
-        StateVFF grind_up_ramp (this, & Navigator :: MoveDuration, Vector.E, 75, 2.0); // direction, power, duration // Vector.getAverageUnitVector2(Vector.getAverageUnitVector2(Vector.E, Vector.DE), Vector.DE))
-        // move until the front bump switch activates
-        StateVFI move_E_bump_D1 (this, & Navigator :: MoveUntilBump, Vector.DE, 20, D1); // direction, power, bumpID
-        // move back a bit
-        StateVFF move_back_from_foosball (this, & Navigator :: MoveDuration, Vector.AB, 35, 0.1); // direction, power, duration
-        // move left a little
-        StateVFF move_to_align_to_foosball (this, & Navigator :: MoveDuration, Vector.C, 35, 0.875); // direction, power, duration // straight at 0.7
-        // rotate a little to align to foosball
-        StateFF turn_to_align_to_foosball (this, & Navigator :: TurnCW, 30, 35); // degrees, power
-        // move forward towards the foolsball disc to touch them
-        StateVFF touch_foosball (this, & Navigator :: MoveDuration, Vector.D, 35, 0.16); // direction, power, bumpID
-        // lower servo
-        StateFF lower_servo (this, & Navigator :: SetServoAngle, 40-5, 1.0); // degrees, waitTime
-
-
-
-        /************************ ADD REFERENCES of all of the state objects to the temporary state machine ************************/
-
-        // note you have to start this new state machine using the GUI button (or at least that's how it's currently set up)
-        TSM.Add (  & do_nothing   ); // the do nothing state should always be the first state (state [0])
-        TSM.Add (  & wait_for_Light   );
-
-        TSM.Add (  & initial_move   );
-        TSM.Add (  & stop   );
-        TSM.Add (  & initial_turn   );
-        TSM.Add (  & stop   );
-        TSM.Add (  & move_duration_DE   );
-        TSM.Add (  & stop   );
-
-        //need something here to say blue or red. if blue execute blue shift, if not do nothing.
-        //TSM.Add( & move_blue_shift );
-        TSM.Add ( & blue_shift_test );
-
-        TSM.Add ( & stop );
-        TSM.Add ( & alignToDDR );
-
-        TSM.Add (  & move_button_F     );
-
-        //TSM.Add (  & turn_clockwise   );
-
-        TSM.Add ( & hold_button );
-        TSM.Add ( & stop );
-
-        TSM.Add (  & move_C_after );
-
-        //TSM.Add (  & do_DDR_stuff   );
-
-        TSM.Add ( & stop );
-
-        // rotate to align with right wall
-        TSM.Add ( & align_to_right_wall );
-        TSM.Add ( & stop );
-        // move to wall using bump
-        TSM.Add ( & move_F_bump_FX );
-        // grind up ramp (for duration) (in a slight diagonal direction)
-        TSM.Add ( & grind_up_ramp );
-        // move until the front bump switch activates
-        TSM.Add ( & move_E_bump_D1 );
-        TSM.Add ( & stop );
-        // move back a bit
-        TSM.Add ( & move_back_from_foosball );
-        TSM.Add ( & stop );
-        // move left a little
-        TSM.Add ( & move_to_align_to_foosball );
-        TSM.Add ( & stop );
-        // rotate
-        TSM.Add ( & turn_to_align_to_foosball );
-        TSM.Add ( & stop );
-        // move forward towards the foolsball disc to touch them
-        TSM.Add ( & touch_foosball );
-        TSM.Add ( & stop );
-        TSM.Add ( & lower_servo );
-
-
-        TSM.Add (  & stop_at_the_end   ); // probably always a good idea to include a stop function at the end
-
-
-        TSM.Update ();
-
-        SM = StateMachine (TSM.timeWhenStateChanged, TSM.currentState); // transfer tempary non-state data into the real state machine
+        
+        // *********** ADD REFERENCES of state objects to state machine *********** //
+        
+        SM.Add (  move_to_avoid_DDR  );
+        SM.Add (  go_touch_that_button  );
+        SM.Add (  stop  );
+        
+        // perform the final stop
+        SM.Add (  stop_at_the_end  );
     }
-
+    
+    
+    // adds states to the statemachine; should only be called once
+    void Initialize () {
+        // add states to the statemachine that perform the navigation procedure specified in the below method
+        PerformanceTestFour ();
+    }
     // resets the navigator object and stops the vehicle (resets state variables and that sort of thing)
     void Reset () {
         veh->Stop ();
         SM.Reset ();
         ResetRotateDegrees ();
         ResetMoveDistance ();
-        // ResetMin ();
+        ResetMin ();
     }
     // starts the navigation procedure; does this by setting state = 1
     void Start () {
@@ -2514,7 +2319,7 @@ void Init () {
     BumpSwitch bumps[] = {   bump0, bump1, bump2, bump3, bump4, bump5   };
 
     // set up the servo; define its integer min and max numbers and set its start angle
-    float servoStartDegrees = 100;
+    float servoStartDegrees = RAISED_SERVO_ANGLE;
     int servoMin = 500; // should be 694 // looks like this was never set properly during the performance test, ope
     int servoMax = 2500; // should be 1536 // looks like this was never set properly during the performance test, ope
     servo0.SetMin (servoMin);
@@ -2556,6 +2361,9 @@ void Init () {
     
     courseRegion = RPS.CurrentRegionLetter ();
     rps = PseudoRPS (); // initialize pseudo RPS object (which is essentially RPS but can be calibrated)
+    
+    // initialize the navigation procedure for the state machine (important that this happens after the vehicle vectors are aligned)
+    navigator.Initialize ();
 
     timeSinceLastFrameUpdate = TimeNow (); // initialize the time since the last screen/frame update
 }
@@ -2585,16 +2393,29 @@ void DrawEverything () {
         course.DrawVehicleVectors (simulatedVehicle);
     }
 
+    LCD.WriteLine (vehicle.cds.Value ());
+    float minLightValue = navigator.minLightValue;
+    if (minLightValue < 66666) {
+        if (vehicle.cds.isRedLight (minLightValue)) {
+            LCD.SetFontColor (RED);
+        } else if (vehicle.cds.isBlueLight (minLightValue)) {
+            LCD.SetFontColor (BLUE);
+        } else {
+            LCD.SetFontColor (WHITE);
+        }
+        LCD.WriteLine (minLightValue);
+    }
+    
     // draw CDS indicator
     int temp0 = vehicle.cds.Value();
     int temp1 = 0;
     sprintf (charPtr, "%d", temp0);
     indicatorCDS.UpdateText (charPtr);
-    if (vehicle.cds.isRedLight()) {
+    if (vehicle.cds.isRedLight ()) {
         indicatorCDS.UpdateColors (INDIANRED);
-    } else if (vehicle.cds.isBlueLight()) {
+    } else if (vehicle.cds.isBlueLight ()) {
         indicatorCDS.UpdateColors (LIGHTBLUE);
-    } else if (vehicle.cds.isLight()) {
+    } else if (vehicle.cds.isLight ()) {
         indicatorCDS.UpdateColors (GOLD);
     } else {
         indicatorCDS.UpdateColors (GRAY);
@@ -2616,10 +2437,11 @@ void DrawEverything () {
     }
     temp0 = rps.X ();
     temp1 = rps.Y ();
-    sprintf (charPtr, "%i, %i", temp0, temp1);
+    // sprintf (charPtr, "%i, %i", temp0, temp1);
     // int temp2 = rps.Heading ();
     // sprintf (charPtr, "%i", temp2);
     // strcpy (charPtr, "Val");
+    sprintf (charPtr, "%i", navigator.SM.currentState);
     indMisc1.UpdateText (charPtr);
     indMisc1.Draw ();
 
@@ -2658,10 +2480,10 @@ void mainLoop () {
     }
     
     if (actionButt0.IsBeingPressed (touch)) { // checks if the button was pressed and updates the state of the button
-        vehicle.servo.SetDegree (30); // sets the servo's angle to 15 degrees
+        vehicle.servo.SetDegree (LOWERED_SERVO_ANGLE); // sets the servo's angle to 15 degrees
     }
     if (actionButt1.IsBeingPressed (touch)) { // checks if the button was pressed and updates the state of the button
-        vehicle.servo.SetDegree (100); // sets the servo's angle to 100 degrees
+        vehicle.servo.SetDegree (RAISED_SERVO_ANGLE); // sets the servo's angle to 100 degrees
     }
 
     if (cancelButt.IsBeingPressed (touch)) { // checks if the button was pressed and updates the state of the button

@@ -671,7 +671,7 @@ public:
     }
     bool isBlueLight (float testValue) { // note this is not for testing the current value of the CDS cell
         float lowerBound = 0.55;
-        float upperBound = 1.7; // 1.55
+        float upperBound = 1.55; // 1.55 // 1.7
         bool result = false;
 
         if (testValue >= lowerBound && testValue < upperBound) {

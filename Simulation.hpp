@@ -743,7 +743,7 @@ public:
             Vector2 wheelVelocity = Vector2 (wheelDirection.x * wheelVelocityMagnitude * MAGIC_VEL_NUMBER, wheelDirection.y * wheelVelocityMagnitude * MAGIC_VEL_NUMBER);
             netVelocity = Vector2 (netVelocity.x + wheelVelocity.x, netVelocity.y + wheelVelocity.y);
             
-            float MAGIC_ANG_ACCEL_NUMBER = 1.66;
+            float MAGIC_ANG_ACCEL_NUMBER = 1.43; // 1.66 = old, 1.47 = real, 1.43 = untested real (use cautiously)
             // float MAGIC_ANG_ACCEL_NUMBER = 1.66 * deltaTime * 280;
             float angularVelocity = -veh->radius * wheelVelocityMagnitude * MAGIC_ANG_ACCEL_NUMBER; // hmmm
             netAngularVelocity += angularVelocity;
