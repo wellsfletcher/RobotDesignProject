@@ -673,10 +673,8 @@ Course course;
 class PseudoRPS {
 public:
     PseudoRPS () {
-        x_offset = 0;
-        y_offset = 0;
-        x_scale = 1.0;
-        y_scale = 1.0;
+        offset = Vector2 (0, 0);
+        scale = Vector2 (1, 1);
         
         startAngle = 60.0; // 15.0
         lastValidCoordinate = Vector2 (0, 0);
@@ -685,15 +683,27 @@ public:
         isValidSignal = false;
         isLikelyNewSignal = false;
         timeWhenLikelyUpdated = 0;
+        
+        // Vector2 coordinateAtDDR = Vector2 (24.343, 12.343);
+        // Vector2 coordinateAtToken = Vector2 (14.743, 39.771);
+        
+        // firstTargetWaypoint = Vector2 (23.599, 15.000);
+        // secondTargetWaypoint = Vector2 (13.800, 42.800);
+        
+        // firstTargetWaypoint = Vector2 (24.343 + 2, 12.343 + 1); // DDR
+        // secondTargetWaypoint = Vector2 (14.743, 39.771 + 3); // TOKEN
+        
+        firstTargetWaypoint = Vector2 (23.599, 15.000); // somewhere in the far corner by the ddr
     }
     float x;
     float y;
     float heading;
     
-    float x_offset;
-    float y_offset;
-    float x_scale;
-    float y_scale;
+    Vector2 offset;
+    Vector2 scale;
+    
+    Vector2 firstTargetWaypoint;
+    // Vector2 secondTargetWaypoint;
     
     float startAngle;
     
@@ -701,13 +711,13 @@ public:
         if (!safeMode && isValid ()) {
             lastValidCoordinate.x = RPS.X ();
         }
-        return lastValidCoordinate.x;
+        return ToCourseX (lastValidCoordinate.x);
     }
     float Y () {
         if (!safeMode && isValid ()) {
             lastValidCoordinate.y = RPS.Y ();
         }
-        return lastValidCoordinate.y;
+        return ToCourseY (lastValidCoordinate.y);
     }
     // returns a Vector2 containing the last valid RPS coordinates
     Vector2 Pos () {
@@ -735,35 +745,56 @@ public:
     float getTimeWhenLikelyUpdated () {
         return timeWhenLikelyUpdated;
     }
+    bool hasChangedSinceMovement (Vector2 startPosition) {
+        bool result = false;
+        float tolerance = 000.1;
+        if (!(abs (lastValidCoordinate.y - startPosition.y) < tolerance)) { // || isLikelyNewSignal  (to avoid it timing out ... add this if that happens)
+            result = true;
+        }
+        return result;
+    }
     
-    static float ToCourseX (float x) {
-        float x0 = x;
+    float ToCourseX (float x) {
+        float x0 = x * scale.x + offset.x;
+        // float x0 = x;
         return x0;
     }
-    static float ToCourseY (float y) {
-        float y0 = y;
+    float ToCourseY (float y) {
+        float y0 = y * scale.y + offset.y;
+        // float y0 = y;
         return y0;
     }
-    void Calibrate (float actual_x0, float actual_x1, float actual_y0, float actual_y1) {
-        float target_x0 = 6;
-        float target_x1 = 30;
-        
-        float target_y0 = 6;
-        float target_y1 = 30;
-        
-        float diff_x0 = actual_x0 - target_x0;
-        float diff_x1 = actual_x1 - target_x1;
-        float slope_x = diff_x1 / diff_x0;
-        
-        float diff_y0 = actual_y0 - target_y0;
-        float diff_y1 = actual_y1 - target_y1;
-        float slope_y = diff_y1 / diff_y0;
-        
-        x_offset = diff_x0;
-        y_offset = diff_y0;
-        x_scale = slope_x;
-        x_scale = slope_y;
+    
+    void Calibrate (Vector2 realWorldWaypoint) { // float actual_x0, float actual_x1, float actual_y0, float actual_y1)
+        // float diff_x0 = realWorldWaypoint.x - firstTargetWaypoint.x;
+        // float diff_y0 = realWorldWaypoint.y - firstTargetWaypoint.y;
+        float diff_x0 = firstTargetWaypoint.x - realWorldWaypoint.x;
+        float diff_y0 = firstTargetWaypoint.y - realWorldWaypoint.y;
+        offset.x = diff_x0;
+        offset.y = diff_y0;
     }
+    /*
+    void OldCalibrate (Vector2 firstRealWorldWaypoint, Vector2 secondRealWorldWaypoint) { // float actual_x0, float actual_x1, float actual_y0, float actual_y1)
+        float diff_x0 = firstRealWorldWaypoint.x - firstTargetWaypoint.x;
+        float diff_x1 = secondRealWorldWaypoint.x - secondTargetWaypoint.x;
+        // float slope_x = diff_x1 / diff_x0;
+        
+        float diff_y0 = firstRealWorldWaypoint.y - firstTargetWaypoint.y;
+        float diff_y1 = secondRealWorldWaypoint.y - secondTargetWaypoint.y;
+        // float slope_y = diff_y1 / diff_y0;
+        
+        float theSlope = (diff_y1 - diff_y0) / (diff_x1 - diff_x0) * -1; // the slope should be the slope between the difference; so if nothing weird was happening, the slope would be 1.0
+        
+        //- offset.x = diff_x0;
+        //- offset.y = diff_y0;
+        // scale.x = slope_x;
+        // scale.y = slope_y;
+        // scale.x = 1.0 / theSlope;
+        // scale.y = 1.0 / theSlope;
+        
+        // cout << "slope = " << theSlope << endl;
+    }
+    */
     
     void EnableSafeMode () {
         safeMode = true;
@@ -776,11 +807,11 @@ public:
         float tempRPS_X = RPS.X ();
         float tempRPS_Y = RPS.Y ();
         float tempHeading = RPS.Heading ();
+        isLikelyNewSignal = false;
         
         if (tempRPS_X > -0.5) {
-            float tolerance = .00001;
+            float tolerance = .0001; // .00001
             float UPDATE_TIMEOUT_TIME = 1.5;
-            isLikelyNewSignal = false;
             
             if ( !(abs (lastValidCoordinate.x - tempRPS_X) < tolerance) || TimeNow () - timeWhenLikelyUpdated > UPDATE_TIMEOUT_TIME) {
                 isLikelyNewSignal = true;
@@ -1225,6 +1256,8 @@ public:
         
         lastTouchCoordinate = Vector2 (0, 0);
         timeWhenValidRPSWasReceived = 0;
+        currentIteration = 0;
+        positionAtStartOfIteration = Vector2 (0, 0);
         
         // add states to the statemachine to perform the navigation procedure specified in the method below
         // PerformanceTestFour ();
@@ -1252,6 +1285,8 @@ public:
     
     Vector2 lastTouchCoordinate;
     float timeWhenValidRPSWasReceived;
+    int currentIteration; // used to keep track of how many RPS precision iterations have executed
+    Vector2 positionAtStartOfIteration;
     
     // declare constants
     
@@ -1315,8 +1350,55 @@ public:
         return result;
     }
     
+    bool PreciseRotateToGlobalAngle (float degrees, float power, int iterations) {
+        bool result = false;
+        bool isWithinTolerance = false;
+        float tolerance = 3.0; // 0.2
+        
+        // check if this is the first call to the function and check if rps.isValid to ensure that the most recent coordinate is a valid rps coordinate
+        if (rotationDidNotJustStart == false  &&  rps.isValid ()  &&  rps.getTimeWhenLikelyUpdated () > SM.timeWhenStateChanged) {
+            float start = rps.Heading ();
+            
+            float deltaDegrees = degrees - start;
+            deltaDegrees *= -1;
+            
+            float deltaDegreesMinus360 = deltaDegrees - 360;
+            
+            if (abs (deltaDegrees) > abs (deltaDegreesMinus360)) {
+                deltaDegrees = deltaDegreesMinus360;
+            }
+            
+            rotateAngleRotation = deltaDegrees;
+            
+            if (abs (rotateAngleRotation) < tolerance) {
+                isWithinTolerance = true;
+                currentIteration = 0;
+                result = true;
+            } else {
+            
+            float signedPower = abs (power) * SignOf (rotateAngleRotation); // ensure that the power is in the correct direction // maybe this could be causing problems
+            result = TurnDegrees (rotateAngleRotation, signedPower);
+            
+            }
+        } else if (rotationDidNotJustStart) {
+            float signedPower = abs (power) * SignOf (rotateAngleRotation); // ensure that the power is in the correct direction
+            result = TurnDegrees (rotateAngleRotation, signedPower);
+        }
+        
+        if (result && !isWithinTolerance) {
+            currentIteration++;
+            if (currentIteration >= iterations) {
+                currentIteration = 0;
+            } else {
+                result = false;
+            }
+        }
+        
+        return result;
+    }
+    
     /*
-    bool OldRotateToGlobalAngle (float degrees, float power) {
+    bool OldOldRotateToGlobalAngle (float degrees, float power) {
         bool result = false;
         
         // check if this is the first call to the function and check if rps.isValid to ensure that the most recent coordinate is a valid rps coordinate
@@ -1397,8 +1479,144 @@ public:
     
     /*
      * Moves the vehicle to the given coordinate; this function waits for a new valid RPS signal before executing.
+     * ()   Will execute a single iteration if the given @iterations equals 0.
      */
-    bool PreciseMoveToCoordinate (Vector2 target, float power, float distanceError) {
+    bool PreciseMoveToCoordinate (Vector2 target, float power, int iterations) {
+        bool result = false;
+        bool isWithinTolerance = false;
+        float tolerance = 0.2;
+        
+        float powerChangeCoefficient = 0.5;
+        float alteredPower = power * pow (powerChangeCoefficient, currentIteration);
+        
+        // bool firstIterationCheck = currentIteration == 0  &&  rps.getTimeWhenLikelyUpdated () > SM.timeWhenStateChanged;
+        
+        // check if this is the first call to the function and check if rps.isValid to ensure that the most recent coordinate is a valid rps coordinate
+        // if it's the first iteration, call the likelyUpdated function; if it's not, check if the RPS has atkeast updated since the first movement...
+        if (movementDidNotJustStart == false  &&  rps.isValid ()  &&  (rps.getTimeWhenLikelyUpdated () > SM.timeWhenStateChanged)) {
+        // if (movementDidNotJustStart == false  &&  rps.isValid ()  &&  ((currentIteration == 0  &&  rps.getTimeWhenLikelyUpdated () > SM.timeWhenStateChanged)  ||  (currentIteration != 0  &&  rps.hasChangedSinceMovement (positionAtStartOfIteration)))) {
+            Vector2 start = Vector2 (rps.X (), rps.Y ());
+            positionAtStartOfIteration = start;
+            moveCoordDistance = Vector2::Distance (start, target);
+            
+            if (moveCoordDistance < tolerance) {
+                isWithinTolerance = true;
+                currentIteration = 0;
+                result = true;
+                cout << "Within tolerance!" << endl;
+            } else {
+            
+                moveCoordDirection = Vector2 (target.x - start.x, target.y - start.y);
+                // moveCoordDirection = Vector2 (-3, .1);
+                moveCoordDirection = moveCoordDirection.getUnitVector ();
+                moveCoordDirection = GetGlobalVector (moveCoordDirection);
+
+                result = MoveDistance (moveCoordDirection, alteredPower, moveCoordDistance);
+            
+            }
+        } else if (movementDidNotJustStart) {
+            result = MoveDistance (moveCoordDirection, alteredPower, moveCoordDistance);
+        }
+        
+        if (result && !isWithinTolerance) {
+            currentIteration++;
+            if (currentIteration >= iterations) {
+                currentIteration = 0;
+            } else {
+                veh->Stop ();
+                result = false;
+            }
+        }
+        
+        return result;
+    }
+    
+    /*
+    bool PreciseMoveToCoordinate (Vector2 target, float power, int iterations) {
+        bool result = false;
+        bool isWithinTolerance = false;
+        float tolerance = 0.2;
+        
+        // check if this is the first call to the function and check if rps.isValid to ensure that the most recent coordinate is a valid rps coordinate
+        if (movementDidNotJustStart == false  &&  rps.isValid ()  &&  rps.getTimeWhenLikelyUpdated () > SM.timeWhenStateChanged) {
+            Vector2 start = Vector2 (rps.X (), rps.Y ());
+            moveCoordDistance = Vector2::Distance (start, target);
+            
+            if (moveCoordDistance < tolerance) {
+                isWithinTolerance = true;
+                currentIteration = 0;
+                result = true;
+            } else {
+                
+                moveCoordDirection = Vector2 (target.x - start.x, target.y - start.y);
+                // moveCoordDirection = Vector2 (-3, .1);
+                moveCoordDirection = moveCoordDirection.getUnitVector ();
+                moveCoordDirection = GetGlobalVector (moveCoordDirection);
+                
+                result = MoveDistance (moveCoordDirection, power, moveCoordDistance);
+                
+            }
+        } else if (movementDidNotJustStart) {
+            result = MoveDistance (moveCoordDirection, power, moveCoordDistance);
+        }
+        
+        if (result && !isWithinTolerance) {
+            currentIteration++;
+            if (currentIteration >= iterations) {
+                currentIteration = 0;
+            } else {
+                result = false;
+            }
+        }
+        
+        return result;
+    }
+    */
+
+    /*
+    bool PreciseMoveToCoordinate (Vector2 target, float power, int iterations) {
+        bool result = false;
+        bool isWithinTolerance = false;
+        float tolerance = 0.1;
+
+        // check if this is the first call to the function and check if rps.isValid to ensure that the most recent coordinate is a valid rps coordinate
+        if (movementDidNotJustStart == false  &&  rps.isValid ()  &&  rps.getTimeWhenLikelyUpdated () > SM.timeWhenStateChanged) {
+            Vector2 start = Vector2 (rps.X (), rps.Y ());
+            moveCoordDistance = Vector2::Distance (start, target);
+
+            if (moveCoordDistance < tolerance) {
+                isWithinTolerance = true;
+                //† currentIteration = 0;
+                //† result = true;
+            } //† else {
+
+            moveCoordDirection = Vector2 (target.x - start.x, target.y - start.y);
+            // moveCoordDirection = Vector2 (-3, .1);
+            moveCoordDirection = moveCoordDirection.getUnitVector ();
+            moveCoordDirection = GetGlobalVector (moveCoordDirection);
+
+            result = MoveDistance (moveCoordDirection, power, moveCoordDistance);
+
+            //† }
+        } else if (movementDidNotJustStart) {
+            result = MoveDistance (moveCoordDirection, power, moveCoordDistance);
+        }
+
+        if (result) { //† if (result && !isWithinTolerance) {
+            currentIteration++;
+            if (currentIteration >= iterations) {
+                currentIteration = 0;
+            } else {
+                result = false;
+            }
+        }
+
+        return result;
+    }
+    */
+    
+    /*
+    bool OldOldPreciseMoveToCoordinate (Vector2 target, float power, float distanceError) {
         bool result = false;
         
         // check if this is the first call to the function and check if rps.isValid to ensure that the most recent coordinate is a valid rps coordinate
@@ -1418,6 +1636,7 @@ public:
         
         return result;
     }
+    */
     
     /*
      * Moves the vehicle to the given coordinate; this function adjusts the ropots movement whenever the RPS updates.
@@ -1568,6 +1787,7 @@ public:
     // resets the global variables associated with the move distance function
     void ResetMoveDistance () {
         movementDidNotJustStart = false;
+        currentIteration = 0;
     }
 
     /*
@@ -2021,6 +2241,11 @@ public:
     
     
     void FinalCompetition () {
+        /*
+         * Robot at DDR = 23.599, 15.000
+         * Robot at token dispenser = 13.800, 42.800
+         * Robot before going to lever = 4.199, 45.900
+         */
         InitialState ();
         GetToDDR ();
         DoDDR ();
@@ -2089,7 +2314,8 @@ public:
         StateVFF    * initial_move = new StateVFF (this, & Navigator :: MoveDuration, Vector.F, 35, 0.8); // direction, power, duration
         // StateFF     * initial_turn = new StateFF (this, & Navigator :: TurnCW, 135, 50); // degrees, power // increased from 35
         // StateVFF    * move_duration_DE = new StateVFF (this, & Navigator :: MoveDuration, Vector.DE, 35, 2.9-0.45); // direction, power, duration
-        StateVFF    * move_to_DDR_light = new StateVFF (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (24, 12), 50,  0.0); // coordinate, power, distanceError
+        // robot at DDR = 23.599, 15.000; was 22.5, 14.5
+        StateVFI    * move_to_DDR_light = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (23.600 - 0.5, 15.000), 50, 3); // coordinate, power, distanceError // 24, 15 // 22, 15 // 23.5, 14.5
         
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
@@ -2101,8 +2327,8 @@ public:
         // SM.Add (  move_duration_DE  );
         SM.Add (  move_to_DDR_light  );
         // (wait each time for a new RPS signal before executing the next movement)
-        SM.Add (  move_to_DDR_light  );
-        SM.Add (  move_to_DDR_light  );
+        // SM.Add (  move_to_DDR_light  );
+        // SM.Add (  move_to_DDR_light  );
         SM.Add (  stop  );
     }
     
@@ -2117,8 +2343,8 @@ public:
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
         StateVFF    * gather_up_min_lightValue = new StateVFF (this, & Navigator :: MoveToGetMinLightValue, Vector.DE, 35, 0.1); // direction, power, duration // MoveToGetMinLightValue
         StateVoid   * blue_shift_using_min = new StateVoid (this, & Navigator :: MoveDurationBlueShiftUsingMin); //
-        // ****** fix ****** //
-        StateFF     * global_align_to_DDR = new StateFF (this, & Navigator :: RotateToGlobalAngle, -180, 50); // 179 // (hyp. works) 179+45 // no -135 ... so it is problem with the rotateToGlobal being not accurate
+        // StateFF     * global_align_to_DDR = new StateFF (this, & Navigator :: RotateToGlobalAngle, -180, 50); // 179 // (hyp. works) 179+45 // no -135 ... so it is problem with the rotateToGlobal being not accurate
+        StateFFI    * global_align_to_DDR = new StateFFI (this, & Navigator :: PreciseRotateToGlobalAngle, -180, 50, 1); // 179 // (hyp. works) 179+45
         StateVFF    * move_button_F = new StateVFF (this, & Navigator :: MoveDuration, Vector.F, 35, 1.05); // direction, power, duration
         StateF      * hold_button = new StateF (this, & Navigator :: StopVehicle, 5.0); // stopTime
 
@@ -2195,8 +2421,12 @@ public:
         // StateVFF    * move_left_to_token = new StateVFF (this, & Navigator :: MoveDistance, Vector.C, 35, 0.1); // direction, power, distance // 5.0
         // StateVFF    * move_dir_to_token = new StateVFF (this, & Navigator :: MoveDistance, Vector.BC, 35, 22); // direction, power, distance // 18.0
         StateVFF    * move_left_to_token = new StateVFF (this, & Navigator :: AssistedMoveToCoordinate, Vector2 (20, 50), 50, 0.0); // coordinate, power, AssistedMoveToCoordinate
-        StateVFF    * move_dir_to_token = new StateVFF (this, & Navigator :: AssistedMoveToCoordinate, Vector2 (15, 42), 50, 0.0); // coordinate, power, distanceError
-        StateVFF    * precise_move_dir_to_token = new StateVFF (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (15, 42), 50, 0.0); // coordinate, power, distanceError
+
+        // robot at token dispenser = 13.800, 42.800; was 14.0, 45
+        Vector2 tokenDropSpot = Vector2 (13.800, 44.0); // 15.5, 43 // 15.0, 45
+
+        StateVFF    * move_dir_to_token = new StateVFF (this, & Navigator :: AssistedMoveToCoordinate, tokenDropSpot, 50, 0.0); // coordinate, power, distanceError
+        StateVFI    * precise_move_dir_to_token = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, tokenDropSpot, 50, 1); // coordinate, power, distanceError
         // move forward to token dispenser (should mayhaps be more precise)
         // StateVFF    * move_forward_to_token = new StateVFF (this, & Navigator :: MoveDistance, Vector.AB, 35, 8.0); // direction, power, distance // was 8.0
         
@@ -2206,6 +2436,7 @@ public:
         SM.Add (  move_left_to_token  );
         
         SM.Add (  move_dir_to_token  );
+        SM.Add (  precise_move_dir_to_token  );
         SM.Add (  precise_move_dir_to_token  );
         SM.Add (  precise_move_dir_to_token  );
         
@@ -2230,19 +2461,19 @@ public:
         // StateFF     * rotate_to_token = new StateFF (this, & Navigator :: TurnCCW, 180, 35); // degrees, power
         StateFF     * global_rotate_to_token = new StateFF (this, & Navigator :: RotateToGlobalAngle, 60, 35); // degrees, power
         //- StateVFF    * move_to_token_again = new StateVFF (this, & Navigator :: MoveDistance, Vector.BC, 35, 0.5); // EF // was 1.4
-        StateVFF    * move_to_token_again = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 35, 0.5); // EF // was 1.4
+        // StateVFF    * move_to_token_again = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 35, 0.5); // EF // was 1.4
         StateVFI    * touch_the_token = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 35, D0); // direction, power, bumpID
         // StateVFF    * align_after_touching_token = new StateVFF (this, & Navigator :: MoveDuration, Vector.D, 25, 0.1); // direction, power, duration
         // StateFFI    * align_after_touching_token_2 = new StateFFI (this, & Navigator :: TurnUntilBumpCCW, 900, 35, D1);
-        StateVFF    * move_back_from_token = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 35, 2.0); // EF // was 2.0 // then 1.5
+        StateVFF    * move_back_from_token = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 35, 1.5); // EF // was 2.0 // then 1.5 // 2.0
         
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
         
         SM.Add (  global_rotate_to_token  );
         SM.Add (  stop  ); // move_to_token_again
-        SM.Add (  move_to_token_again  );
-        SM.Add (  stop  );
+        // SM.Add (  move_to_token_again  );
+        // SM.Add (  stop  );
         
         SM.Add (  touch_the_token  );
         SM.Add (  stop  );
@@ -2263,9 +2494,12 @@ public:
         
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
         
-        StateVFF    * move_to_below_lever = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (6, 44), 50,  0.0); // coordinate, power, distanceError
+        // StateVFF    * move_to_below_lever = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (5, 44), 50,  0.0); // coordinate, power, distanceError
+        // robot before going to lever = 4.199, 45.900; was 5, 44
+        StateVFI    * move_to_below_lever = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (5, 44), 50, 2); // coordinate, power, iterations
         StateFF     * global_rotate_to_lever = new StateFF (this, & Navigator :: RotateToGlobalAngle, -75, 35); // degrees, power
-        StateVFF    * move_to_lever = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (10, 62), 50,  0.0); // coordinate, power, distanceError
+        // StateVFF    * move_to_lever = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (10.0, 66), 50,  0.0); // coordinate, power, distanceError // 10, 62 // 12, 64 // 10.5, 66
+        StateVFI    * move_to_lever = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (10.0, 66), 50,  1); // coordinate, power, distanceError // 10, 62 // 12, 64 // 10.5, 66
 
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
@@ -2292,11 +2526,17 @@ public:
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
         StateFF     * lower_servo = new StateFF (this, & Navigator :: SetServoAngle, LOWERED_SERVO_ANGLE, 1.0); // degrees, waitTime
         StateFF     * raise_servo = new StateFF (this, & Navigator :: SetServoAngle, RAISED_SERVO_ANGLE, 1.0); // degrees, waitTime
-        
+        StateVFF    * move_right_before_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 2.0); // direction, power // 0.16 // .25 // 0.20 // 1.0 // 2.0 // was 3.0
+        StateVFF    * move_backwards = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 50, 1.25); // direction, power // 3.0 // 2.5 // was 1.5
+
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
         
-        // (maybe) do additional adjustments to make sure the vehicle is facing the lever
+        // do additional adjustments to make sure the vehicle is facing the lever
+        SM.Add (  move_backwards  );
+        SM.Add (  stop  );
+        SM.Add (  move_right_before_lever  );
+        SM.Add (  stop  );
         // lower the servo
         SM.Add (  lower_servo  );
         // SM.Add (  stop  );
@@ -2312,9 +2552,9 @@ public:
         // *********** INITIALIZE state objects *********** //
         
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
-        StateVFF    * move_right_after_lever = new StateVFF (this, & Navigator :: MoveDuration, Vector.EF, 50, 0.5); // direction, power // 0.16 // .25 // 0.20
+        StateVFF    * move_right_after_lever = new StateVFF (this, & Navigator :: MoveDuration, Vector.EF, 50, 0.15 + 0.0); // direction, power // 0.16 // .25 // 0.2
          
-        StateFF     * align_to_foosball = new StateFF (this, & Navigator :: TurnCW, 15, 35); // degrees, power // 30-5
+        StateFF     * align_to_foosball = new StateFF (this, & Navigator :: TurnCW, 25, 35); // degrees, power // 15
         StateVFI    * move_right_parralel_to_rod_until_bump = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.F, 40, F0); // direction, power, bumpID
         StateVFI    * move_up_to_get_snug_with_foosball_box = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.DE, 35, D1); // direction, power // 0.16 // .25 // 0.20
         StateVFI    * move_right_parralel_to_rod_until_bump_again = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.F, 20, F1); // direction, power, bumpID
@@ -2594,7 +2834,7 @@ public:
         
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
         StateVFF    * move_to_avoid_DDR = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (18, 14), 50,  0.0); // coordinate, power, distanceError // 6, 6
-        StateVFF    * go_touch_that_button = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (4, 3), 50,  0.0); // coordinate, power, distanceError // 6, 6
+        StateVFF    * go_touch_that_button = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (7.3 - 3, 10.599 - 3), 50,  0.0); // coordinate, power, distanceError // 4, 6
         
         // the final stop
         StateF      * stop_at_the_end = new StateF (this, & Navigator :: StopVehicle, 0.01); // stopTime
@@ -2825,6 +3065,20 @@ void Init () {
     courseRegion = RPS.CurrentRegionLetter ();
     rps = PseudoRPS (); // initialize pseudo RPS object (which is essentially RPS but can be calibrated)
     
+    // firstTargetWaypoint = Vector2 (23.599, 15.000);
+    // secondTargetWaypoint = Vector2 (13.800, 42.800);
+    
+    // Vector2 coordinateAtDDR = Vector2 (24.343, 12.343);
+    // Vector2 coordinateAtToken = Vector2 (14.743, 39.771);
+    
+    //- Vector2 coordinateAtDDR = Vector2 (23.599, 15.000);
+    //- Vector2 coordinateAtToken = Vector2 (13.800, 42.800);
+    
+    // rps.Calibrate (coordinateAtDDR, coordinateAtToken);
+    
+    Vector2 realWorldPoint = Vector2 (24.343, 12.343);
+    rps.Calibrate (realWorldPoint);
+    
     // initialize the navigation procedure for the state machine (important that this happens after the vehicle vectors are aligned)
     navigator.Initialize ();
 
@@ -2840,6 +3094,7 @@ void DrawEverything () {
     LCD.Clear (BACKGROUNDCOLOR); // clear the screen (for animation purposes)
     char charPtr [100];
 
+    
     // draw the course
     course.DrawCourse ();
 
@@ -2856,6 +3111,11 @@ void DrawEverything () {
         course.DrawVehicleVectors (simulatedVehicle);
     }
 
+    LCD.SetFontColor (WHITE);
+    LCD.Write (RPS.X ());
+    LCD.Write (", ");
+    LCD.WriteLine (RPS.Y ());
+    
     LCD.WriteLine (vehicle.cds.Value ());
     float minLightValue = navigator.minLightValue;
     if (minLightValue < 66666) {
@@ -2909,7 +3169,7 @@ void DrawEverything () {
     indMisc1.Draw ();
 
     // draw motor indicators
-    PrintMotorPercents();
+    // PrintMotorPercents();
     indMotor0.box.width = MOTOR_IND_MAX_WIDTH * (vehicle.wheels [2].activePercent / 100.0); // 0
     indMotor1.box.width = MOTOR_IND_MAX_WIDTH * (vehicle.wheels [0].activePercent / 100.0); // 1
     indMotor2.box.width = MOTOR_IND_MAX_WIDTH * (vehicle.wheels [1].activePercent / 100.0); // 2

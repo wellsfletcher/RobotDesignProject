@@ -156,7 +156,7 @@ private:
     int _region;
     float angleAtStart;
     
-    float REFRESH_RATE = 0.8; // 0.5 // 0.8
+    float REFRESH_RATE = 0.4; // 0.5 // 0.8
     float timeWhenTimerStarted = 0;
     int RANDOM_FACTOR = 200;
     
