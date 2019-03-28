@@ -1,4 +1,4 @@
-#define IS_SIMULATION 1 // also have to define this variable in Simulation.hpp and Classes.hpp
+#define IS_SIMULATION 0 // also have to define this variable in Simulation.hpp and Classes.hpp
 #if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
 
@@ -693,7 +693,7 @@ public:
         // firstTargetWaypoint = Vector2 (24.343 + 2, 12.343 + 1); // DDR
         // secondTargetWaypoint = Vector2 (14.743, 39.771 + 3); // TOKEN
         
-        firstTargetWaypoint = Vector2 (23.599, 15.000); // somewhere in the far corner by the ddr
+        firstTargetWaypoint = Vector2 (31.199, 12.800); // somewhere in the far corner by the ddr
     }
     float x;
     float y;
@@ -747,7 +747,7 @@ public:
     }
     bool hasChangedSinceMovement (Vector2 startPosition) {
         bool result = false;
-        float tolerance = 000.1;
+        float tolerance = 0.0001;
         if (!(abs (lastValidCoordinate.y - startPosition.y) < tolerance)) { // || isLikelyNewSignal  (to avoid it timing out ... add this if that happens)
             result = true;
         }
@@ -1503,7 +1503,7 @@ public:
                 isWithinTolerance = true;
                 currentIteration = 0;
                 result = true;
-                cout << "Within tolerance!" << endl;
+                // cout << "Within tolerance!" << endl;
             } else {
             
                 moveCoordDirection = Vector2 (target.x - start.x, target.y - start.y);
@@ -2141,6 +2141,25 @@ public:
         
         return result;
     }
+    
+    
+    /*
+     * Checks if there is an RPS signal; if there is not, then perform an abort procedure consisting of going in the given local direction (which uses the last valid RPS signal) until there is an RPS signal.
+     * @return true when the action is complete, false otherwise.
+     */
+    bool PerformLocalAbortion (Vector2 direction, float power, float maxDistance) {
+        bool result = false;
+        
+        // check if the RPS signal is valid
+        if (rps.isValid ()) {
+            // timeWhenValidRPSWasReceived = TimeNow ();
+            result = true; // may want to keep moving to make sure the robot stays in a valid RPS region
+        } else {
+            result = MoveDistance (direction, power, maxDistance);
+        }
+        
+        return result;
+    }
 
 
     /*
@@ -2311,11 +2330,12 @@ public:
         
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
         StateF      * short_stop = new StateF (this, & Navigator :: StopVehicle, 0.1); // stopTime
+        StateFFI    * global_align_to_DDR = new StateFFI (this, & Navigator :: PreciseRotateToGlobalAngle, -180, 50, 1); // 179 // (hyp. works) 179+45
         StateVFF    * initial_move = new StateVFF (this, & Navigator :: MoveDuration, Vector.F, 35, 0.8); // direction, power, duration
         // StateFF     * initial_turn = new StateFF (this, & Navigator :: TurnCW, 135, 50); // degrees, power // increased from 35
         // StateVFF    * move_duration_DE = new StateVFF (this, & Navigator :: MoveDuration, Vector.DE, 35, 2.9-0.45); // direction, power, duration
         // robot at DDR = 23.599, 15.000; was 22.5, 14.5
-        StateVFI    * move_to_DDR_light = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (23.600 - 0.5, 15.000), 50, 3); // coordinate, power, distanceError // 24, 15 // 22, 15 // 23.5, 14.5
+        StateVFI    * move_to_DDR_light = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (23.600 - 0.5, 15.000), 50, 3); // coordinate, power, distanceError // 24, 15 // 22, 15 // 23.5, 14.5 // 23.600 - 0.5
         
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
@@ -2325,6 +2345,9 @@ public:
         // SM.Add (  initial_turn  );
         // SM.Add (  stop  );
         // SM.Add (  move_duration_DE  );
+        SM.Add (  stop  );
+        SM.Add (  global_align_to_DDR  );
+        SM.Add (  stop  );
         SM.Add (  move_to_DDR_light  );
         // (wait each time for a new RPS signal before executing the next movement)
         // SM.Add (  move_to_DDR_light  );
@@ -2344,7 +2367,7 @@ public:
         StateVFF    * gather_up_min_lightValue = new StateVFF (this, & Navigator :: MoveToGetMinLightValue, Vector.DE, 35, 0.1); // direction, power, duration // MoveToGetMinLightValue
         StateVoid   * blue_shift_using_min = new StateVoid (this, & Navigator :: MoveDurationBlueShiftUsingMin); //
         // StateFF     * global_align_to_DDR = new StateFF (this, & Navigator :: RotateToGlobalAngle, -180, 50); // 179 // (hyp. works) 179+45 // no -135 ... so it is problem with the rotateToGlobal being not accurate
-        StateFFI    * global_align_to_DDR = new StateFFI (this, & Navigator :: PreciseRotateToGlobalAngle, -180, 50, 1); // 179 // (hyp. works) 179+45
+        StateFFI    * global_align_to_DDR = new StateFFI (this, & Navigator :: PreciseRotateToGlobalAngle, -180, 50 / 2.0, 1); // 179 // (hyp. works) 179+45
         StateVFF    * move_button_F = new StateVFF (this, & Navigator :: MoveDuration, Vector.F, 35, 1.05); // direction, power, duration
         StateF      * hold_button = new StateF (this, & Navigator :: StopVehicle, 5.0); // stopTime
 
@@ -2379,6 +2402,7 @@ public:
         // StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: GlobalMoveWhileTurningUntilAboveY, Vector2 (1, 4).getUnitVector (), 60, 60.0, 10, 50); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15
         StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: GlobalMoveWhileTurningWithAbortUntilAboveY, Vector2 (1, 4).getUnitVector (), 80, 60.0, 10, 50-2); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15
         StateFF     * align_to_global_angle_before_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 50);
+        StateFF     * slower_align_to_global_angle_before_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 25);
         // StateVFF    * abortion_tester = new StateVFF (this, & Navigator :: GlobalMoveDuration, Vector.up, 35,  1.0); // direction, power, duration
         // StateFF     * realign_to_global_angle_after_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 50); // degrees, power // 270 + angleOffset + 30 // -90 // 270
         StateFF     * realign_to_global_angle_after_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 50); // degrees, power // 270 + angleOffset + 30 // -90 // 270
@@ -2391,6 +2415,8 @@ public:
         SM.Add (  get_centered_on_ramp  ); // state 10
         SM.Add (  stop  );
         SM.Add (  align_to_global_angle_before_ramp  );
+        SM.Add (  stop  );
+        SM.Add (  slower_align_to_global_angle_before_ramp  );
         SM.Add (  stop  );
         
         // get up the ramp good
@@ -2423,10 +2449,10 @@ public:
         StateVFF    * move_left_to_token = new StateVFF (this, & Navigator :: AssistedMoveToCoordinate, Vector2 (20, 50), 50, 0.0); // coordinate, power, AssistedMoveToCoordinate
 
         // robot at token dispenser = 13.800, 42.800; was 14.0, 45
-        Vector2 tokenDropSpot = Vector2 (13.800, 44.0); // 15.5, 43 // 15.0, 45
+        Vector2 tokenDropSpot = Vector2 (13.800 + 1.2, 44.0); // 15.5, 43 // 15.0, 45 // was working when 2.0; could be more centered // 1.7 // 1.5
 
         StateVFF    * move_dir_to_token = new StateVFF (this, & Navigator :: AssistedMoveToCoordinate, tokenDropSpot, 50, 0.0); // coordinate, power, distanceError
-        StateVFI    * precise_move_dir_to_token = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, tokenDropSpot, 50, 1); // coordinate, power, distanceError
+        StateVFI    * precise_move_dir_to_token = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, tokenDropSpot, 50 * 0.50, 3); // coordinate, power, distanceError
         // move forward to token dispenser (should mayhaps be more precise)
         // StateVFF    * move_forward_to_token = new StateVFF (this, & Navigator :: MoveDistance, Vector.AB, 35, 8.0); // direction, power, distance // was 8.0
         
@@ -2437,8 +2463,8 @@ public:
         
         SM.Add (  move_dir_to_token  );
         SM.Add (  precise_move_dir_to_token  );
-        SM.Add (  precise_move_dir_to_token  );
-        SM.Add (  precise_move_dir_to_token  );
+        // SM.Add (  precise_move_dir_to_token  );
+        // SM.Add (  precise_move_dir_to_token  );
         
         // SM.Add (  move_forward_to_token  );
         SM.Add (  stop  );
@@ -2465,11 +2491,13 @@ public:
         StateVFI    * touch_the_token = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 35, D0); // direction, power, bumpID
         // StateVFF    * align_after_touching_token = new StateVFF (this, & Navigator :: MoveDuration, Vector.D, 25, 0.1); // direction, power, duration
         // StateFFI    * align_after_touching_token_2 = new StateFFI (this, & Navigator :: TurnUntilBumpCCW, 900, 35, D1);
-        StateVFF    * move_back_from_token = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 35, 1.5); // EF // was 2.0 // then 1.5 // 2.0
+        StateVFF    * move_back_from_token = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 35, 0.5); // EF // was 2.0 // then 1.5 // 2.0 // 1.5
         
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
         
+        SM.Add (  global_rotate_to_token  );
+        SM.Add (  stop  ); // move_to_token_again
         SM.Add (  global_rotate_to_token  );
         SM.Add (  stop  ); // move_to_token_again
         // SM.Add (  move_to_token_again  );
@@ -2494,13 +2522,73 @@ public:
         
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
         
+        // StateVFI    * move_to_below_lever = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (5, 44), 50, 3); // coordinate, power, iterations
+        // StateFF     * global_rotate_to_lever = new StateFF (this, & Navigator :: RotateToGlobalAngle, -75, 35); // degrees, power
+        // StateVFI    * move_to_lever = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (10.0, 66), 50,  1); // coordinate, power, distanceError // 10, 62 // 12, 64 // 10.5, 66
+
+        StateVFF    * move_after_token = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (7, 50), 50, 0.0); // coordinate, power, iterations
+        StateFF     * rotate_to_face_left_wall = new StateFF (this, & Navigator :: RotateToGlobalAngle, -30, 35); // degrees, power // rotation angle may be incorrect
+        StateVFI    * bump_into_left_wall = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 50, D0); // direction, power, bumpID
+        
+        StateVFF    * move_upward_real_quick = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 8); // direction, power, distance // 10 = about after gap
+        StateVFF    * move_back_from_left_wall = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 50, 1.0); // direction, power, distance // 2.0
+        
+        StateFF     * rotate_to_lever = new StateFF (this, & Navigator :: TurnCW, 45, 50); // degrees, power // 15
+        StateVFF    * move_right_before_bump = new StateVFF (this, & Navigator :: MoveDistance, Vector.E, 50, 5.0); // direction, power
+        StateVFI    * bump_into_lever_wall = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 50, D0); // direction, power, bumpID
+        
+        StateVFF    * move_back_from_lever_wall = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 50, 1.35); // direction, power // 3.0 // 2.0
+        StateVFF    * move_right_before_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 2.0); // direction, power // 5.0 // 3.5
+
+        
+        // *********** ADD REFERENCES of state objects to state machine *********** //
+        
+        SM.Add (  move_after_token  );
+        SM.Add (  stop  );
+        SM.Add (  rotate_to_face_left_wall  );
+        SM.Add (  stop  );
+        // 1. bump into left wall
+        SM.Add (  bump_into_left_wall  );
+        SM.Add (  stop  );
+        // 2. go up real quick for distance until around the gap
+        SM.Add (  move_upward_real_quick  );
+        SM.Add (  stop  );
+        // 3. move back from wall
+        SM.Add (  move_back_from_left_wall  );
+        SM.Add (  stop  );
+        
+        // 4. rotate towards lever wall
+        SM.Add (  rotate_to_lever  );
+        SM.Add (  stop  );
+        // move right
+        SM.Add (  move_right_before_bump  );
+        SM.Add (  stop  );
+        // 5. bump into the level wall
+        SM.Add (  bump_into_lever_wall  );
+        SM.Add (  stop  );
+        
+        // 6. backup from the lever wall
+        SM.Add (  move_back_from_lever_wall  );
+        SM.Add (  stop  );
+        // 7. move rightward until at lever
+        SM.Add (  move_right_before_lever  );
+        SM.Add (  stop  );
+    }
+    
+    /*
+    // using move to coordinate / rps
+    void OldGetToLever () {
+        // *********** INITIALIZE state objects *********** //
+        
+        StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
+        
         // StateVFF    * move_to_below_lever = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (5, 44), 50,  0.0); // coordinate, power, distanceError
         // robot before going to lever = 4.199, 45.900; was 5, 44
-        StateVFI    * move_to_below_lever = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (5, 44), 50, 2); // coordinate, power, iterations
+        StateVFI    * move_to_below_lever = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (5, 44), 50, 3); // coordinate, power, iterations
         StateFF     * global_rotate_to_lever = new StateFF (this, & Navigator :: RotateToGlobalAngle, -75, 35); // degrees, power
         // StateVFF    * move_to_lever = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (10.0, 66), 50,  0.0); // coordinate, power, distanceError // 10, 62 // 12, 64 // 10.5, 66
         StateVFI    * move_to_lever = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (10.0, 66), 50,  1); // coordinate, power, distanceError // 10, 62 // 12, 64 // 10.5, 66
-
+        
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
         
@@ -2514,7 +2602,7 @@ public:
         SM.Add (  move_to_lever  );
         SM.Add (  stop  );
     }
-    
+    */
     
     /*
      * START: The robot is at the lever.
@@ -2524,11 +2612,37 @@ public:
         // *********** INITIALIZE state objects *********** //
         
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
-        StateFF     * lower_servo = new StateFF (this, & Navigator :: SetServoAngle, LOWERED_SERVO_ANGLE, 1.0); // degrees, waitTime
+        StateFF     * lower_servo_for_lever = new StateFF (this, & Navigator :: SetServoAngle, LOWERED_SERVO_ANGLE + 30, 1.0); // degrees, waitTime // 65.0 + 3.0
         StateFF     * raise_servo = new StateFF (this, & Navigator :: SetServoAngle, RAISED_SERVO_ANGLE, 1.0); // degrees, waitTime
         StateVFF    * move_right_before_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 2.0); // direction, power // 0.16 // .25 // 0.20 // 1.0 // 2.0 // was 3.0
         StateVFF    * move_backwards = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 50, 1.25); // direction, power // 3.0 // 2.5 // was 1.5
 
+        
+        // *********** ADD REFERENCES of state objects to state machine *********** //
+        
+        // do additional adjustments to make sure the vehicle is facing the lever
+        /*
+        SM.Add (  move_backwards  );
+        SM.Add (  stop  );
+        SM.Add (  move_right_before_lever  );
+        SM.Add (  stop  );
+        */
+        // lower the servo
+        SM.Add (  lower_servo_for_lever  );
+        // SM.Add (  stop  );
+        SM.Add (  raise_servo  );
+    }
+    
+    /*
+    void OldDoLever () {
+        // *********** INITIALIZE state objects *********** //
+        
+        StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
+        StateFF     * lower_servo_for_lever = new StateFF (this, & Navigator :: SetServoAngle, LOWERED_SERVO_ANGLE + 30, 1.0); // degrees, waitTime // 65.0 + 3.0
+        StateFF     * raise_servo = new StateFF (this, & Navigator :: SetServoAngle, RAISED_SERVO_ANGLE, 1.0); // degrees, waitTime
+        StateVFF    * move_right_before_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 2.0); // direction, power // 0.16 // .25 // 0.20 // 1.0 // 2.0 // was 3.0
+        StateVFF    * move_backwards = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 50, 1.25); // direction, power // 3.0 // 2.5 // was 1.5
+        
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
         
@@ -2538,10 +2652,11 @@ public:
         SM.Add (  move_right_before_lever  );
         SM.Add (  stop  );
         // lower the servo
-        SM.Add (  lower_servo  );
+        SM.Add (  lower_servo_for_lever  );
         // SM.Add (  stop  );
         SM.Add (  raise_servo  );
     }
+    */
     
     
     /*
@@ -2552,19 +2667,19 @@ public:
         // *********** INITIALIZE state objects *********** //
         
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
-        StateVFF    * move_right_after_lever = new StateVFF (this, & Navigator :: MoveDuration, Vector.EF, 50, 0.15 + 0.0); // direction, power // 0.16 // .25 // 0.2
+        StateVFF    * move_right_after_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 4.0); // direction, power // 0.15 (duration) // 3.0 // 5.0
          
-        StateFF     * align_to_foosball = new StateFF (this, & Navigator :: TurnCW, 25, 35); // degrees, power // 15
+        StateFF     * align_to_foosball = new StateFF (this, & Navigator :: TurnCW, 15, 35); // degrees, power // 15 // 25
         StateVFI    * move_right_parralel_to_rod_until_bump = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.F, 40, F0); // direction, power, bumpID
         StateVFI    * move_up_to_get_snug_with_foosball_box = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.DE, 35, D1); // direction, power // 0.16 // .25 // 0.20
-        StateVFI    * move_right_parralel_to_rod_until_bump_again = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.F, 20, F1); // direction, power, bumpID
+        StateVFI    * move_right_parralel_to_rod_until_bump_again = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.F, 20 + 20, F1); // direction, power, bumpID
         
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
         
         // move right relative to vehicle in order to avoid the disco ball
         SM.Add (  move_right_after_lever  );
-        SM.Add (  stop  );
+        SM.Add (  stop  );s
         // rotate clockwise some until the vehicle is parralel to the foosball rod  // (... or is facing the right wall)
         SM.Add (  align_to_foosball  );
         SM.Add (  stop  );
@@ -2806,6 +2921,7 @@ public:
         
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
         StateVFF    * move_down_to_get_to_ramp = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 35, 16); // direction, power, distance // 18
+        StateVFF    * make_sure_not_in_deadzone = new StateVFF (this, & Navigator :: PerformLocalAbortion, Vector.Aa, 35,  24.0); // coordinate, power, maxDistance
         StateVFFF   * global_move_to_get_down_ramp = new StateVFFF (this, & Navigator :: GlobalMoveUntilBelowY, Vector.down, 80, 15.0, 22); // direction, power, timeOutDuration, yValue // 65
         // StateVFF    * global_move_to_get_down_ramp = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (28.5, 15), 50,  0.0); // coordinate, power, distanceError
         StateVFF    * get_centered_on_top_of_ramp = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (31, 52), 50,  0.0); // coordinate, power, distanceError // 30, 52 // 32, 52
@@ -2814,7 +2930,8 @@ public:
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
         
-        SM.Add (  move_down_to_get_to_ramp  );
+        SM.Add (  move_down_to_get_to_ramp  ); // can prolly remove this state in the future
+        SM.Add (  make_sure_not_in_deadzone  );
         SM.Add (  stop  );
         SM.Add (  get_centered_on_top_of_ramp  );
         SM.Add (  stop  );
@@ -2880,7 +2997,7 @@ private:
 
 /************************ MISC FUNCTIONS ************************/
 
-// ...
+Vector2 getCourseCalibration ();
 
 
 
@@ -2924,6 +3041,7 @@ Button butt;
 Button cancelButt;
 Button actionButt0;
 Button actionButt1;
+Button calibrateButt;
 
 StateIndicator indicatorCDS;
 StateIndicator indMisc0;
@@ -2988,6 +3106,10 @@ void Init () {
     indMotor0.UpdateColors (LIGHTGRAY);
     indMotor1.UpdateColors (LIGHTGRAY);
     indMotor2.UpdateColors (LIGHTGRAY);
+    
+    strcpy (charPtr, "CALIBRATE"); // use charPtr to set the text of the button
+    // initialize the reset button where its parameters are the same as the one's mentioned above
+    calibrateButt = Button (  Box ( Vector2 (BUTT_X_POS, -198 - BUTT_Y_MARGIN), BUTT_WIDTH + 20, BUTT_HEIGHT ), charPtr, 0  );
     
     // initialize the course object
     course = Course (Vector2 (200, -15), 0.3); // course = Course (Vector2 (150, -32), .25);
@@ -3076,13 +3198,44 @@ void Init () {
     
     // rps.Calibrate (coordinateAtDDR, coordinateAtToken);
     
-    Vector2 realWorldPoint = Vector2 (24.343, 12.343);
+    Vector2 realWorldPoint = Vector2 (5, 5);
+    
+    if (IS_SIMULATION) {
+        realWorldPoint = Vector2 (31.543, 10.629); // 24.343, 12.343
+    } else {
+        realWorldPoint = getCourseCalibration ();
+    }
+    
     rps.Calibrate (realWorldPoint);
     
     // initialize the navigation procedure for the state machine (important that this happens after the vehicle vectors are aligned)
     navigator.Initialize ();
 
     timeSinceLastFrameUpdate = TimeNow (); // initialize the time since the last screen/frame update
+}
+
+
+Vector2 getCourseCalibration () {
+    Vector2 courseDefault = Vector2 (31.199, 12.800);
+    Vector2 courseA = courseDefault;
+    Vector2 courseB = Vector2 (31.199, 12.800); // one use for target coordinate for calibration
+    Vector2 courseC = courseDefault;
+    Vector2 courseD = Vector2 (30.900, 12.900);
+    Vector2 courseE = courseDefault;
+    Vector2 courseF = courseDefault;
+    Vector2 courseG = courseDefault;
+    Vector2 courseH = courseDefault;
+    
+    Vector2 courses [8] = {courseA, courseB, courseC, courseD, courseE, courseF, courseG, courseH};
+    
+    int courseID = RPS.CurrentRegion ();
+    Vector2 calibrationCoordinateUsed = courseDefault;
+    
+    if (courseID >= 0  &&  courseID < 8) {
+        calibrationCoordinateUsed = courses [courseID];
+    }
+    
+    return calibrationCoordinateUsed;
 }
 
 
@@ -3184,6 +3337,7 @@ void DrawEverything () {
     cancelButt.DrawButton();
     actionButt0.DrawButton();
     actionButt1.DrawButton();
+    calibrateButt.DrawButton();
 }
 
 
@@ -3214,6 +3368,9 @@ void mainLoop () {
     }
     if (butt.IsBeingPressed (touch)) { // checks if the button was pressed and updates the state of the button
         navigator.Start (); // manually starts the navigation procedure
+    }
+    if (calibrateButt.IsBeingPressed (touch)) { // checks if the button was pressed and updates the state of the button
+        rps.Calibrate (   Vector2 (RPS.X (), RPS.Y ())   );
     }
 
     // vehicle.pos = Vector2 (RPS.X (), RPS.Y () - 6.0 * 12);
