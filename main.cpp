@@ -421,6 +421,8 @@ public:
     void DrawCourse () {
         LCD.SetFontColor (GRAY);
         DrawCourseObject (bounds);
+        // LCD.SetFontColor (WHITE); // DARKGRAY
+        // DrawOutlineOfBox (bounds);
 
         /*
         LCD.SetFontColor (LIGHTGRAY);
@@ -484,6 +486,13 @@ public:
         Box globalObj = Box ( ToGlobalPosition (obj.points[0]), obj.width * PIXEL_SCALE, obj.height * PIXEL_SCALE);
         // draw the global box through normal means
         DrawBox (globalObj);
+    }
+    // draws an outline of a box object within the course
+    void DrawOutlineOfBox (Box obj) {
+        // convert the box to global coordinates
+        Box globalObj = Box ( ToGlobalPosition (obj.points[0]), obj.width * PIXEL_SCALE, obj.height * PIXEL_SCALE);
+        // draw the global box through normal means
+        DrawBoxBorder (globalObj);
     }
     // draws a circle object within the course
     void DrawCourseObject (Circle obj) {
@@ -1221,6 +1230,8 @@ private:
 
 /************************ NAVIGATOR DECLARATION ************************/
 
+#define DISTANCE_ADJUSTMENT 1.0 // used to accomodate variances in the Proteus's power // 0.8
+#define POWER_ADJUSTMENT 0.8 // used to accomodate variances in the Proteus's power // 0.8
 class Navigator {
 public:
     Navigator (Vehicle *vehicle) {
@@ -1980,11 +1991,19 @@ public:
 
     float minLightValue;
     bool MoveToGetMinLightValue (Vector2 direction, float power, float duration) {
+        bool result = false;
+
         veh->Move (direction, power);
         if (cds0.Value() < minLightValue) {
             minLightValue = cds0.Value();
         }
-        return (TimeNow() - SM.timeWhenStateChanged > duration);
+
+        result = TimeNow() - SM.timeWhenStateChanged > duration;
+        if (result) {
+            veh->Stop ();
+        }
+
+        return result;
     }
 
     void ResetMin () {
@@ -2364,6 +2383,8 @@ public:
         // *********** INITIALIZE state objects *********** //
         
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
+        StateF      * short_stop = new StateF (this, & Navigator :: StopVehicle, 0.5); // stopTime
+
         StateVFF    * gather_up_min_lightValue = new StateVFF (this, & Navigator :: MoveToGetMinLightValue, Vector.DE, 35, 0.1); // direction, power, duration // MoveToGetMinLightValue
         StateVoid   * blue_shift_using_min = new StateVoid (this, & Navigator :: MoveDurationBlueShiftUsingMin); //
         // StateFF     * global_align_to_DDR = new StateFF (this, & Navigator :: RotateToGlobalAngle, -180, 50); // 179 // (hyp. works) 179+45 // no -135 ... so it is problem with the rotateToGlobal being not accurate
@@ -2377,6 +2398,7 @@ public:
         SM.Add (  global_align_to_DDR  ); // global_align_to_DDR // alignToDDR
         SM.Add (  stop  );
         SM.Add (  gather_up_min_lightValue  );
+        SM.Add (  short_stop  );
         SM.Add (  blue_shift_using_min  );
         //- SM.Add (  blue_shift_test  );
         SM.Add (  stop  );
@@ -2538,7 +2560,7 @@ public:
         StateVFI    * bump_into_lever_wall = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 50, D0); // direction, power, bumpID
         
         StateVFF    * move_back_from_lever_wall = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 50, 1.35); // direction, power // 3.0 // 2.0
-        StateVFF    * move_right_before_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 2.0); // direction, power // 5.0 // 3.5
+        StateVFF    * move_right_before_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 2.15); // direction, power // 2.0
 
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
@@ -2612,10 +2634,11 @@ public:
         // *********** INITIALIZE state objects *********** //
         
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
-        StateFF     * lower_servo_for_lever = new StateFF (this, & Navigator :: SetServoAngle, LOWERED_SERVO_ANGLE + 30, 1.0); // degrees, waitTime // 65.0 + 3.0
+        StateFF     * lower_servo_for_lever = new StateFF (this, & Navigator :: SetServoAngle, LOWERED_SERVO_ANGLE + 15, 1.0); // degrees, waitTime // 65.0 + 3.0 // + 30
         StateFF     * raise_servo = new StateFF (this, & Navigator :: SetServoAngle, RAISED_SERVO_ANGLE, 1.0); // degrees, waitTime
         StateVFF    * move_right_before_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 2.0); // direction, power // 0.16 // .25 // 0.20 // 1.0 // 2.0 // was 3.0
         StateVFF    * move_backwards = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 50, 1.25); // direction, power // 3.0 // 2.5 // was 1.5
+        StateVFF    * move_back_to_pull_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 35, 1.3); // direction, power // 3.0 // 2.0
 
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
@@ -2629,7 +2652,8 @@ public:
         */
         // lower the servo
         SM.Add (  lower_servo_for_lever  );
-        // SM.Add (  stop  );
+        SM.Add (  move_back_to_pull_lever  );
+        SM.Add (  stop  );
         SM.Add (  raise_servo  );
     }
     
@@ -2667,7 +2691,7 @@ public:
         // *********** INITIALIZE state objects *********** //
         
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
-        StateVFF    * move_right_after_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 4.0); // direction, power // 0.15 (duration) // 3.0 // 5.0
+        StateVFF    * move_right_after_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 2.5); // direction, power // 0.15 (duration) // 4.0 ... 3.0 ... 2.85
          
         StateFF     * align_to_foosball = new StateFF (this, & Navigator :: TurnCW, 15, 35); // degrees, power // 15 // 25
         StateVFI    * move_right_parralel_to_rod_until_bump = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.F, 40, F0); // direction, power, bumpID
@@ -2679,7 +2703,7 @@ public:
         
         // move right relative to vehicle in order to avoid the disco ball
         SM.Add (  move_right_after_lever  );
-        SM.Add (  stop  );s
+        SM.Add (  stop  );
         // rotate clockwise some until the vehicle is parralel to the foosball rod  // (... or is facing the right wall)
         SM.Add (  align_to_foosball  );
         SM.Add (  stop  );
@@ -2764,29 +2788,29 @@ public:
         StateFF     * lower_servo_for_foosball_drag = new StateFF (this, & Navigator :: SetServoAngle, LOWERED_SERVO_ANGLE, 1.0); // degrees, waitTime
         
         // move back a bit
-        StateVFF    * move_back_from_foosball = new StateVFF (this, & Navigator :: MoveDuration, Vector.AB, 35, 0.1); // direction, power, duration
+        StateVFF    * move_back_from_foosball = new StateVFF (this, & Navigator :: MoveDuration, Vector.AB, 35 * POWER_ADJUSTMENT, 0.1 * DISTANCE_ADJUSTMENT); // direction, power, duration
         // StateVFF    * move_back_from_foosball = new StateVFF (this, & Navigator :: MoveDuration, Vector.Aa, 35, 0.1); // direction, power, duration
         // move left a little
-        StateVFF    * move_to_align_to_foosball = new StateVFF (this, & Navigator :: MoveDuration, Vector.C, 35, 0.875); // direction, power, duration // straight at 0.7
+        StateVFF    * move_to_align_to_foosball = new StateVFF (this, & Navigator :: MoveDuration, Vector.C, 35 * POWER_ADJUSTMENT, 0.875 * DISTANCE_ADJUSTMENT); // direction, power, duration // straight at 0.7
         // StateVFF    * move_to_align_to_foosball = new StateVFF (this, & Navigator :: MoveDuration, Vector.BC, 35, 0.875); // direction, power, duration // straight at 0.7
         // rotate a little to align to foosball
-        StateFF     * turn_to_align_to_foosball = new StateFF (this, & Navigator :: TurnCW, 30+5, 35); // degrees, power // 30-5
+        StateFF     * turn_to_align_to_foosball = new StateFF (this, & Navigator :: TurnCW, 35 * DISTANCE_ADJUSTMENT, 35 * POWER_ADJUSTMENT); // degrees, power // 30-5
         // move forward towards the foolsball disc to touch them
-        StateVFF    * move_to_touch_foosball = new StateVFF (this, & Navigator :: MoveDuration, Vector.D, 35, 0.12); // direction, power // 0.16 // .25 // 0.20
+        StateVFF    * move_to_touch_foosball = new StateVFF (this, & Navigator :: MoveDuration, Vector.D, 35 * POWER_ADJUSTMENT, 0.12 * DISTANCE_ADJUSTMENT); // direction, power // 0.16 // .25 // 0.20
         // drag foosball leftwards
         // StateFF     * turn_while_dragging_foosball = new StateFF (this, & Navigator :: TurnCCW, 30-5, 35); // degrees, power
         // StateVFF    * drag_foosball_leftwards = new StateVFF (this, & Navigator :: MoveDistance, Vector.BC, 35, 11.5); // EF // was 2.0 // then 1.5
-        StateVFFF   * drag_foosball_leftwards = new StateVFFF (this, & Navigator :: MoveWhileTurningDuration, Vector.BC, 35, 1.6, 5); // EF // was 2.0 // then 1.5 // 20 // -20 // 2.0 // 10
+        StateVFFF   * drag_foosball_leftwards = new StateVFFF (this, & Navigator :: MoveWhileTurningDuration, Vector.BC, 35 * POWER_ADJUSTMENT, 1.6 * DISTANCE_ADJUSTMENT, 5 * POWER_ADJUSTMENT); // EF // was 2.0 // then 1.5 // 20 // -20 // 2.0 // 10
         
         // push the foosball discs again
-        StateVFF    * move_right_before_push = new StateVFF (this, & Navigator :: MoveDuration, Vector.EF, 35, 1.0); // direction, power // 0.16 // .25 // 0.20
-        StateVFFF   * push_foosball_leftwards = new StateVFFF (this, & Navigator :: MoveWhileTurningDuration, Vector.BC, 35, 1.0-0.15, 2); // EF // was 2.0 // then 1.5 // 20 // -20 // 2.0 // 10
+        StateVFF    * move_right_before_push = new StateVFF (this, & Navigator :: MoveDuration, Vector.EF, 35 * POWER_ADJUSTMENT, 1.0 * DISTANCE_ADJUSTMENT); // direction, power // 0.16 // .25 // 0.20
+        StateVFFF   * push_foosball_leftwards = new StateVFFF (this, & Navigator :: MoveWhileTurningDuration, Vector.BC, 35 * POWER_ADJUSTMENT, 0.85 * DISTANCE_ADJUSTMENT, 2 * POWER_ADJUSTMENT); // 1.0-0.15
         StateFF     * lower_servo_for_foosball_push = new StateFF (this, & Navigator :: SetServoAngle, LOWERED_SERVO_ANGLE - 5.0, 1.0); // degrees, waitTime
 
         // move back a bit
-        StateVFF    * move_back_from_foosball_again = new StateVFF (this, & Navigator :: MoveDuration, Vector.Aa, 35, 0.3); // direction, power, duration
+        StateVFF    * move_back_from_foosball_again = new StateVFF (this, & Navigator :: MoveDuration, Vector.Aa, 35 * POWER_ADJUSTMENT, 0.3 * DISTANCE_ADJUSTMENT); // direction, power, duration
         // straighten
-        StateFF     * straighten_after_foosball = new StateFF (this, & Navigator :: TurnCW, 1, 35); // degrees, power // 35
+        StateFF     * straighten_after_foosball = new StateFF (this, & Navigator :: TurnCW, 1 * DISTANCE_ADJUSTMENT, 35 * POWER_ADJUSTMENT); // degrees, power // 35
         StateVFI    * move_right_after_foosball = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.EF, 30, F0); // direction, power, bumpID
 
         
@@ -3033,7 +3057,7 @@ Vectors Vector;
 // sample variables for button declaration
 #define BUTT_WIDTH 100
 #define BUTT_HEIGHT 30
-#define BUTT_Y_POS 45
+#define BUTT_Y_POS 25 //- 45
 #define BUTT_X_POS 15
 #define BUTT_X_MARGIN 15
 #define BUTT_Y_MARGIN 10
@@ -3050,7 +3074,7 @@ StateIndicator indMotor0;
 StateIndicator indMotor1;
 StateIndicator indMotor2;
 // #define MOTOR_IND_X_POS 15
-#define MOTOR_IND_Y_POS 165 // 195 // 150
+#define MOTOR_IND_Y_POS 165+20 // 195 // 150 //- 165
 #define MOTOR_IND_MARGIN 0
 #define MOTOR_IND_MAX_WIDTH 174/2 // 175
 #define MOTOR_IND_HEIGHT 11 // 11
@@ -3109,7 +3133,7 @@ void Init () {
     
     strcpy (charPtr, "CALIBRATE"); // use charPtr to set the text of the button
     // initialize the reset button where its parameters are the same as the one's mentioned above
-    calibrateButt = Button (  Box ( Vector2 (BUTT_X_POS, -198 - BUTT_Y_MARGIN), BUTT_WIDTH + 20, BUTT_HEIGHT ), charPtr, 0  );
+    calibrateButt = Button (  Box ( Vector2 (BUTT_X_POS, -MOTOR_IND_Y_POS - MOTOR_IND_MARGIN*3 - MOTOR_IND_HEIGHT*3 - BUTT_Y_MARGIN), 175, BUTT_HEIGHT ), charPtr, 0  );
     
     // initialize the course object
     course = Course (Vector2 (200, -15), 0.3); // course = Course (Vector2 (150, -32), .25);
@@ -3269,6 +3293,7 @@ void DrawEverything () {
     LCD.Write (", ");
     LCD.WriteLine (RPS.Y ());
     
+    /*
     LCD.WriteLine (vehicle.cds.Value ());
     float minLightValue = navigator.minLightValue;
     if (minLightValue < 66666) {
@@ -3281,12 +3306,13 @@ void DrawEverything () {
         }
         LCD.WriteLine (minLightValue);
     }
+    */
     
-    // draw CDS indicator
-    int temp0 = vehicle.cds.Value();
-    int temp1 = 0;
-    sprintf (charPtr, "%d", temp0);
-    indicatorCDS.UpdateText (charPtr);
+    /*
+     int temp0 = vehicle.cds.Value();
+     int temp1 = 0;
+     sprintf (charPtr, "%d", temp0);
+     indicatorCDS.UpdateText (charPtr);
     if (vehicle.cds.isRedLight ()) {
         indicatorCDS.UpdateColors (INDIANRED);
     } else if (vehicle.cds.isBlueLight ()) {
@@ -3296,6 +3322,30 @@ void DrawEverything () {
     } else {
         indicatorCDS.UpdateColors (GRAY);
     }
+    */
+    
+    // draw CDS indicator
+    int temp0 = 0;
+    int temp1 = 0;
+    
+    float minLightValue = navigator.minLightValue;
+    
+    if (minLightValue < 66666) {
+        if (vehicle.cds.isRedLight (minLightValue)) {
+            indicatorCDS.UpdateColors (INDIANRED);
+        } else if (vehicle.cds.isBlueLight (minLightValue)) {
+            indicatorCDS.UpdateColors (LIGHTBLUE);
+        } else {
+            indicatorCDS.UpdateColors (GRAY);
+        }
+        temp0 = minLightValue * 1000;
+    } else {
+        indicatorCDS.UpdateColors (BACKGROUNDCOLOR);
+        temp0 = vehicle.cds.Value () * 1000;
+    }
+    
+    sprintf (charPtr, "%d", temp0);
+    indicatorCDS.UpdateText (charPtr);
     indicatorCDS.Draw ();
 
     // draw misc indicators
@@ -3303,12 +3353,14 @@ void DrawEverything () {
     sprintf (charPtr, "%i", temp2);
     // sprintf (charPtr, "%i", navigator.SM.currentState);
     indMisc0.UpdateText (charPtr);
-    indMisc0.Draw ();
+    // indMisc0.Draw ();
 
     
     if (rps.isValid ()) {
+        indMisc0.UpdateColors (ABYSS);
         indMisc1.UpdateColors (ABYSS);
     } else {
+        indMisc0.UpdateColors (CRIMSON);
         indMisc1.UpdateColors (CRIMSON);
     }
     temp0 = rps.X ();
@@ -3319,6 +3371,8 @@ void DrawEverything () {
     // strcpy (charPtr, "Val");
     // sprintf (charPtr, "%i", navigator.SM.currentState);
     indMisc1.UpdateText (charPtr);
+    
+    indMisc0.Draw ();
     indMisc1.Draw ();
 
     // draw motor indicators
