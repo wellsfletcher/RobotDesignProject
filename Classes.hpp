@@ -671,7 +671,7 @@ public:
     }
     bool isBlueLight (float testValue) { // note this is not for testing the current value of the CDS cell
         float lowerBound = 0.55;
-        float upperBound = 1.7; // 1.55
+        float upperBound = 1.55; // 1.55 // 1.7
         bool result = false;
 
         if (testValue >= lowerBound && testValue < upperBound) {
@@ -1074,7 +1074,17 @@ public:
 
     /*********************** general functions *************************/
 
-    // ...
+    // copies bump and motor values from inputVeh into this
+    void CopyHardwareValues (Vehicle *inputVeh) {
+        // copy the wheels array values
+        for (int k = 0; k < wheelsLength; k++) {
+            wheels [k].activePercent = inputVeh->wheels [k].activePercent / 100.0;
+        }
+        // copy the bumps array values
+        for (int k = 0; k < bumpsLength; k++) {
+            bumps [k].value = inputVeh->bumps [k].value;
+        }
+    }
 
 
     /*********************** navigation / movement functions *************************/
@@ -1473,6 +1483,7 @@ private:
 class CourseObjects {
 public:
     CourseObjects () {
+        COURSE_PIXELS_TO_INCHES = 1.0 / 9.72222222222;
         bounds = Box (Vector2 (0, 0), COURSE_WIDTH, COURSE_HEIGHT);
         
         bumb = Box (Vector2 (1, -340), 232, 11);
@@ -1532,7 +1543,7 @@ public:
     Box boxes [SHAPE_COUNT];
     Box invertedBoxes [1];
     
-    constexpr static float COURSE_PIXELS_TO_INCHES = 1.0 / 9.72222222222;
+    float COURSE_PIXELS_TO_INCHES;
     static const int COURSE_WIDTH = 350;
     static const int COURSE_HEIGHT = 700;
     
