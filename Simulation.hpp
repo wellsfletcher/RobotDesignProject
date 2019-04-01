@@ -1,5 +1,8 @@
 #define IS_SIMULATION 1
-#define USES_SIMULATION_CLASSES 1
+#define SUB_SIMULATION_ENABLED 1
+
+#define LIMIT_SIMULATION 0
+#define SIMULATED_BUMPS_ENABLED 1 && !LIMIT_SIMULATION
 /*
 
 
@@ -29,7 +32,7 @@ extern Vehicle simulatedVehicle; // this declaration enables the use of the simu
 
 
 
-#if !IS_SIMULATION  &&  !USES_SIMULATION_CLASSES // if this is not the simulation, then this chunck of code is used. Otherwise, this code is ignored.
+#if !IS_SIMULATION  &&  !SUB_SIMULATION_ENABLED // if this is not the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
 
 
@@ -70,7 +73,7 @@ private:
 
 
 #endif
-#if IS_SIMULATION // &&  USES_SIMULATION_CLASSES // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
+#if IS_SIMULATION // &&  SUB_SIMULATION_ENABLED // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
 
 
@@ -96,7 +99,7 @@ private:
 
 
 #endif
-#if USES_SIMULATION_CLASSES // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
+#if SUB_SIMULATION_ENABLED // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
  
  
@@ -143,10 +146,10 @@ public:
         invertedBoxCount = 0;
         polygonCount = 0;
     }
-    static const int MAX_EDGES = 64;
-    static const int MAX_BOXES = 64;
+    static const int MAX_EDGES = 8;
+    static const int MAX_BOXES = 8;
     static const int MAX_INVERTED_BOXES = 1;
-    static const int MAX_POLYGONS = 64;
+    static const int MAX_POLYGONS = 8;
     int edgeCount;
     int boxCount;
     int invertedBoxCount;
@@ -225,10 +228,33 @@ public:
     }
 private:
 };
+#if !SIMULATED_BUMPS_ENABLED
 
 
 
 
+
+
+
+class Raycast {
+public:
+    Raycast (LayerMask tempLM, Vector2 origin, Vector2 direction, float maxDistance, char type) {
+        
+    }
+    Raycast () {
+        
+    }
+private:
+};
+
+
+
+
+
+
+
+#endif
+#if SIMULATED_BUMPS_ENABLED
 class Raycast {
 public:
     // Raycast (Vector2 origin, Vector2 direction, float maxDistance = 99999, char type = 'X');
@@ -425,6 +451,7 @@ private:
         return sqrt (  pow (end.x - start.x, 2.0)  +  pow (end.y - start.y, 2.0)  );
     }
 };
+#endif
 
 
 /************************************************************************ SIMULATION CODE ************************************************************************/
@@ -681,7 +708,7 @@ private:
 
 class Simulation {
 public:
-    Simulation (Vehicle *vehicle, bool isSubSimulation) {
+    Simulation (Vehicle *vehicle, bool tempIsSubSimulation) {
         veh = vehicle;
         
         // setup and initialize setting variables
@@ -691,6 +718,7 @@ public:
         
         // collisionEnabled = false;
         // bumpsEnabled = false;
+        isSubSimulation = tempIsSubSimulation;
         
         // timeSinceUpdate = TimeNow ();
         timeSinceUpdate = 0;
@@ -725,8 +753,11 @@ public:
         }
         
         // edgeCount = 0; // temporary
-        
+#if SIMULATED_BUMPS_ENABLED
         bumpLM = LayerMask ();
+#else
+        LayerMask bumpLM = LayerMask ();
+#endif
         bumpLM.SetEdges (edges, edgeCount);
         bumpLM.SetBoxes (boxes, boxCount);
         bumpLM.SetInvertedBoxes (invertedBoxes, invertedBoxCount);
@@ -782,7 +813,7 @@ public:
             veh->ApplyAngularAcceleration (collisionTorque);
         }
         
-        if (bumpsEnabled) {
+        if (SIMULATED_BUMPS_ENABLED && bumpsEnabled) {
             // get bump switch value
             for (int k = 0; k < veh->bumpsLength; k++) {
                 veh->bumps [k].SetValue (SimulateBumpValue (&veh->bumps [k]));
@@ -792,6 +823,8 @@ public:
         veh->UpdatePosition ();
         veh->UpdateRotation ();
     }
+    
+#if SIMULATED_BUMPS_ENABLED
     bool SimulateBumpValue (BumpSwitch *bump) {
         // perform ray casts
         Vector2 origin = Vector2 (veh->pos.x + bump->pos.x, veh->pos.y + bump->pos.y); // 72 is course height
@@ -811,6 +844,11 @@ public:
         // return raycast value
         return !(raycast.hit);
     }
+#else
+    bool SimulateBumpValue (BumpSwitch *bump) {
+        return false;
+    }
+#endif
     
     
     /************************ MISC FUNCTIONS ************************/
@@ -850,7 +888,7 @@ public:
     // initialize setting variables
     void SetupSettings () {
         collisionEnabled = true;
-        
+        bumpsEnabled = true;
     }
     // set whether the simulated vehicle should collide or not
     void SetCollision (bool isEnabled) {
@@ -870,7 +908,9 @@ public:
     // physics variables
     
     CourseObjects courseObjects;
+#if SIMULATED_BUMPS_ENABLED
     LayerMask bumpLM; // the layer mask for the bump switches
+#endif
     LayerMask physicsLM; // the layer mask for physics collisions
     PhysicsCalculator physics;
     
@@ -879,11 +919,12 @@ public:
     
     bool collisionEnabled;
     bool bumpsEnabled;
+    bool isSubSimulation;
 
     
     // constant variables initialization
 
-    #if IS_SIMULATION
+#if IS_SIMULATION
     constexpr static float A_GRAVITY = 9.81;
     constexpr static float SQRT_3 = 1.73205080757;
     constexpr static float RADS_TO_DEGREES = M_PI / 180.0;
@@ -894,7 +935,7 @@ public:
     constexpr static float MAX_VELOCITY = VELOCITY_AT_50_POWER * 2.0; // in inches per second
     constexpr static float ANGULAR_VELOCITY_AT_50_POWER = 135.0; // in degrees per second
     constexpr static float MAX_ANGULAR_VELOCITY = ANGULAR_VELOCITY_AT_50_POWER * 2.0; // in degrees per second
-    #else
+#else
     const static float A_GRAVITY = 9.81;
     const static float SQRT_3 = 1.73205080757;
     const static float RADS_TO_DEGREES = M_PI / 180.0;
@@ -908,7 +949,7 @@ public:
     const static float ANGULAR_VELOCITY_AT_50_POWER = 135.0; // in degrees per second
     // const static float MAX_ANGULAR_VELOCITY = ANGULAR_VELOCITY_AT_50_POWER * 2.0; // in degrees per second
     const static float MAX_ANGULAR_VELOCITY = 135.0 * 2.0; // in degrees per second
-    #endif
+#endif
 private:
 };
 

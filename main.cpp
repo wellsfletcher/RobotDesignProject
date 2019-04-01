@@ -1,5 +1,6 @@
 #define IS_SIMULATION 1 // also have to define this variable in Simulation.hpp and Classes.hpp
-#define SUB_SIMULATION_ENABLED 1
+// #define SUB_SIMULATION_ENABLED 1
+// #define LIMIT_SIMULATION 1
 #if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
  
@@ -756,6 +757,10 @@ public:
     float getTimeWhenLikelyUpdated () {
         return timeWhenLikelyUpdated;
     }
+    // returns whether the RPS (probably) just updated or not
+    float IsLikelyNewSignal () {
+        return isLikelyNewSignal;
+    }
     bool hasChangedSinceMovement (Vector2 startPosition) {
         bool result = false;
         float tolerance = 0.0001;
@@ -856,9 +861,9 @@ public:
         }
     }
     
-private:
     Vector2 lastValidCoordinate;
     float lastValidHeading;
+private:
     bool isValidSignal;
     float timeWhenLikelyUpdated;
     bool isLikelyNewSignal;
@@ -867,6 +872,7 @@ private:
 PseudoRPS rps;
 
 
+#if SUB_SIMULATION_ENABLED
 class PhysicsRPS {
 public:
     PhysicsRPS (PseudoRPS *rpsPtr, Vehicle *subSimulationVehiclePtr, Vehicle *inputVehiclePtr) {
@@ -875,7 +881,13 @@ public:
         inputVeh = inputVehiclePtr;
         
         bool isSubSimulation = true;
+        usesRPS = true;
         subSimulation = Simulation (veh, isSubSimulation);
+        
+        startAngle = 60;
+        shouldFlip = true;
+        heading = 315;
+        justResumed = false;
     }
     PhysicsRPS () {
         
@@ -887,27 +899,185 @@ public:
     
     // float x;
     // float y;
-    // float heading;
+    float heading;
+    float startAngle;
+    
+    
+    // SETTING VARIABLES AND FUNCTIONS
+    
+    bool usesRPS; // will re-orient itself whenever there is an RPS update
+    
+    // sets whether the simulated vehicle will re-orient itself whenever there is an RPS update
+    void SetRPSDependence (bool isEnabled) {
+        usesRPS = isEnabled;
+    }
+    // set whether the simulated vehicle should collide or not
+    void SetCollision (bool isEnabled) {
+        subSimulation.collisionEnabled = isEnabled;
+    }
+    // set whether the simulated vehicle should have simulated bumpswitches
+    void SetSimulatedBumps (bool isEnabled) {
+        subSimulation.bumpsEnabled = isEnabled;
+    }
+    
+    // CORE FUNCTIONS
     
     float X () {
-        return veh->pos.x;
+        return rps.ToCourseX (veh->pos.x);
     }
     float Y () {
-        return veh->pos.y;
+        // return rps.ToCourseY (veh->pos.y - 6 * 12);
+        return rps.ToCourseY (veh->pos.y + 6 * 12);
     }
     float Heading () {
-        return veh->pos.y;
+        // Vector2::CapDegrees (simulatedVehicle.dir.getAngle () - angleAtStart);
+        // return heading;
+        return heading + 0;
+    }
+    
+    
+    // MAIN
+    
+    void Resume () {
+        subSimulation.timeSinceUpdate = TimeNow ();
+        // heading = rps.Heading ();
+        // justResumed = true;
+        // Update ();
+    }
+    
+    void SetPositionToRPS () {
+        // veh->SetPosition (rps.Pos ()); // - 6.0 * 12
+        // Vector2 updatedPosition = Vector2 (rps.X (), rps.Y () - 6 * 12); // off by a bit because of calibration
+        Vector2 updatedPosition = Vector2 (rps.lastValidCoordinate.x, rps.lastValidCoordinate.y - 6 * 12); // off by a bit because of calibration
+        veh->SetPosition (updatedPosition);
+        // veh->SetRotation (rps.Heading ()); // rps.Heading () + 240.0 - 60.0
+        // veh->SetRotation (rps.Heading () + 240.0 - 60.0);
+        veh->SetRotation (Vector2::BetterCapDegrees (rps.Heading () - startAngle));
+        // veh->SetRotation (Vector2::DegreesToVector2 ( rps.Heading () - startAngle));
     }
     
     void Update () {
-        if (simulatedVehicle.pos.x > 13) {
-            
+        float previousHeading = heading;
+        /*
+        if (justResumed) {
+            previousHeading = rps.Heading ();
+            shouldFlip = true;
         }
+        */
+        
         veh->CopyHardwareValues (inputVeh);
+        
+        if (rps.IsLikelyNewSignal () || justResumed) {
+            // veh->SetPosition (rps.Pos ()); // - 6.0 * 12
+            // Vector2 updatedPosition = Vector2 (rps.X (), rps.Y () - 6 * 12); // off by a bit because of calibration
+            Vector2 updatedPosition = Vector2 (rps.lastValidCoordinate.x, rps.lastValidCoordinate.y - 6 * 12); // off by a bit because of calibration
+            veh->SetPosition (updatedPosition);
+            // veh->SetRotation (rps.Heading ()); // rps.Heading () + 240.0 - 60.0
+            // veh->SetRotation (rps.Heading () + 240.0 - 60.0);
+            veh->SetRotation (Vector2::BetterCapDegrees (rps.Heading () - startAngle));
+            // veh->SetRotation (Vector2::DegreesToVector2 ( rps.Heading () - startAngle));
+            justResumed = false;
+        }
+    
         subSimulation.Update ();
+        
+        // update some important variables
+        // heading = Vector2::CapDegrees (veh->dir.getAngle () + startAngle - 270);
+        // heading = Vector2::CapDegrees (veh->dir.getAngle () + 150);
+        /*
+        heading = veh->dir.getAngle () - 210;
+        if (heading < 0) {
+            heading += 360;
+        }
+        */
+        // heading = veh->dir.getNotMessedUpVehicleDirAngle ();
+        heading = Vector2::CapDegrees (veh->dir.getBetterAngle () + 30 - startAngle);
+        
+        if (shouldFlip) {
+            previousHeading = Vector2::BetterCapDegrees (previousHeading - 180);
+        }
+        
+        float degreeDistance = Vector2::getDegreeDistance (previousHeading, heading);
+        if (previousHeading < 60 && heading > 240 && degreeDistance > 10) { // eading > 60 && heading < 180
+            // cout << "x veh dir = " << veh->dir.x << ", " << veh->dir.y << endl;
+            // cout << "x rps heading = " << rps.Heading () << endl;
+            // cout << "x physics heading = " << Heading () << endl << endl;
+            shouldFlip = !shouldFlip;
+        }
+        
+        if (shouldFlip) {
+            heading = Vector2::BetterCapDegrees (heading - 180);
+        }
+        
+        /*
+        if (justResumed) {
+            justResumed = false;
+        }
+        */
+    }
+private:
+    bool shouldFlip;
+    bool justResumed;
+};
+#else
+class PhysicsRPS {
+public:
+    PhysicsRPS (PseudoRPS *rpsPtr, Vehicle *subSimulationVehiclePtr, Vehicle *inputVehiclePtr) {
+
+    }
+    PhysicsRPS () {
+        
+    }
+    PseudoRPS *psRPS;
+    Vehicle *veh; // sub-simulation vehicle
+    Vehicle *inputVeh; // normal vehicle; contains hardware inputs
+    
+    // SETTING VARIABLES AND FUNCTIONS
+    
+    // sets whether the simulated vehicle will re-orient itself whenever there is an RPS update
+    void SetRPSDependence (bool isEnabled) {
+
+    }
+    // set whether the simulated vehicle should collide or not
+    void SetCollision (bool isEnabled) {
+
+    }
+    // set whether the simulated vehicle should have simulated bumpswitches
+    void SetSimulatedBumps (bool isEnabled) {
+
+    }
+    
+    // CORE FUNCTIONS
+    
+    float X () {
+        return rps.X ();
+    }
+    float Y () {
+        // return rps.ToCourseY (veh->pos.y - 6 * 12);
+        return rps.Y ();
+    }
+    float Heading () {
+        return rps.Heading () * 0;
+    }
+    
+    
+    // MAIN
+    
+    void Resume () {
+
+    }
+    
+    void SetPositionToRPS () {
+
+    }
+    
+    void Update () {
+
     }
 private:
 };
+#endif
+
 PhysicsRPS physics;
 
 
@@ -984,6 +1154,37 @@ public:
     // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
     virtual const bool Go (Navigator *navPtr) {
         return (navPtr->*functionPtr) (v0, f0, f1, i0, i1); // calls the function in which functionPtr is pointing to
+    }
+private:
+};
+
+
+// this object extends the State base class
+class StateVFFFI : public State {
+public:
+    StateVFFFI (Navigator *navPtr, bool (Navigator::*funcPtr) (Vector2, float, float, float, int), Vector2 vctr, float flt0, float flt1, float flt2, int int0) {
+        nav = navPtr;
+        functionPtr = funcPtr;
+        v0 = vctr;
+        f0 = flt0;
+        f1 = flt1;
+        f2 = flt2;
+        i0 = int0;
+    }
+    StateVFFFI () {
+        
+    }
+    Navigator *nav;
+    bool (Navigator::*functionPtr) (Vector2, float, float, float, int); // declares a pointer to a function
+    Vector2 v0;
+    float f0;
+    float f1;
+    float f2;
+    int i0;
+    
+    // perform the state's actions; because this class is "virtual", it effectively overrides the State bases class's "Go" method when you make an object of this type (though the stuff you have to do with pointers to make this happen is a bit annoying)
+    virtual const bool Go (Navigator *navPtr) {
+        return (navPtr->*functionPtr) (v0, f0, f1, f2, i0); // calls the function in which functionPtr is pointing to
     }
 private:
 };
@@ -1244,7 +1445,7 @@ public:
         timeWhenStateChanged = 0;
     }
     // vector<State*> states; // state data vector
-    State *states [180]; // was 64 //
+    State *states [999]; // was 64 // 180
     int length; // the length of the state data vector
     int currentState;
     float timeWhenStateChanged;
@@ -1274,9 +1475,9 @@ public:
     void Update (Navigator *navPtr) {
         // cout << "Go! " << currentState << endl;
         // call event data function until it returns true (the end condition is met)
-        if (currentState == 1) {
+        // if (currentState == 1) {
             
-        }
+        // }
         bool stateFinished = states [currentState]->Go (navPtr);
         // cout << "Go! " << currentState << endl;
         // if the end condition is met, then increment the current state and ~note the time in which the state ended
@@ -1344,6 +1545,13 @@ public:
         positionAtStartOfIteration = Vector2 (0, 0);
         
         
+        // intialize physics variables
+        
+        alwaysRunSimulation = false;
+        simulationRunning = alwaysRunSimulation;
+        physics.SetSimulatedBumps (false);
+        
+        
         // initialize calibration variables
         
         DEFAULT_MAX_ANGULAR_VELOCITY = 135 * 2.0 * (1.0 / 1.15); // in degrees per second
@@ -1389,6 +1597,7 @@ public:
     // declare physics variables
     
     bool simulationRunning;
+    bool alwaysRunSimulation;
     
     
     // declare calibration variables
@@ -1408,10 +1617,11 @@ public:
         return simulationRunning;
     }
     void StartSimulation () {
-        simulationRunning = false;
+        physics.Resume ();
+        simulationRunning = true;
     }
     void EndSimulation () {
-        simulationRunning = true;
+        simulationRunning = false || alwaysRunSimulation;
     }
     
     
@@ -1757,6 +1967,8 @@ public:
             } else {
                 veh->Stop ();
                 result = false;
+                // manually update when the SM thinks the state changed
+                SM.timeWhenStateChanged = TimeNow ();
             }
         }
         
@@ -2159,6 +2371,82 @@ public:
         return result;
     }
     
+    /*
+     * Moves the vehicle in the given global @direction with the given @power while turning with the given @turnPower CCW
+     * until the vehicle has passed the given @xValue or until the given @timeOutDuration in seconds has passed. Also
+     * perform abort adjustment if the RPS signal is not valid.
+     * @return true when the action is complete, false otherwise.
+     */
+    bool PhysicsMoveWhileTurningUntilAboveY (Vector2 direction, float power, float timeOutDuration, float turnPower, float yValue) {
+        bool result = false;
+        bool isValidSignal = rps.isValid ();
+        // float rotationErrorAmount = -10; // -30 // -10
+        
+        
+        // check if the action is complete; if it is, then mayhaps reset something
+        if (movementDidNotJustStart == false && isValidSignal) {
+            movementDidNotJustStart = true;
+            
+            StartSimulation ();
+            
+            // veh->Move (GetGlobalPhysicsVector (direction), power);
+            // veh->Turn (-turnPower);
+        }
+        if (movementDidNotJustStart) {
+            result = physics.Y () >= yValue || TimeNow() - SM.timeWhenStateChanged > timeOutDuration;
+            
+            // if (rps.IsLikelyNewSignal()) {
+            // cout << "veh dir = " << physics.veh->dir.x << ", " << physics.veh->dir.y << endl;
+            // cout << "rps heading = " << rps.Heading () << endl;
+            // cout << "physics heading = " << physics.Heading () << endl << endl;
+            // }
+            
+            if (result) {
+                movementDidNotJustStart = false;
+                EndSimulation ();
+            } else {
+                veh->Move (GetGlobalPhysicsVector (direction), power);
+                veh->Turn (-turnPower);
+            }
+        }
+        
+        return result;
+    }
+    
+    // converts global vector to local vector relative to the vehicle's orientation
+    Vector2 GetGlobalPhysicsVector (Vector2 global) {
+        Vector2 newGlobal = Vector2 (global.x, global.y);
+        if (global.y == 0) {
+            newGlobal.x *= -1;
+        }
+        float relativeDegrees = newGlobal.getCappedAngle () - physics.Heading () + 30;
+        relativeDegrees = Vector2::CapDegrees (relativeDegrees);
+        // cout << "relDegrees: " << relativeDegrees << " " << TimeNow () << endl;
+        // relativeDegrees -= 180;
+        
+        float lower = 90;
+        float upper = 270;
+        bool shouldFlip = false;
+        
+        if (relativeDegrees >= lower && relativeDegrees < upper) {
+            // relativeDegrees += 180;
+            // relativeDegrees *= -1;
+            shouldFlip = true;
+            // cout << "relDegrees: " << relativeDegrees << " " << TimeNow () << endl;
+        }
+        
+        Vector2 local = Vector2::DegreesToVector2 (relativeDegrees);
+        local = local.getUnitVector ();
+        
+        if (shouldFlip) {
+            local = Vector2 (-local.x, -local.y);
+        }
+        
+        local.Rotate(-60);
+        
+        return local;
+    }
+    
     // converts global vector to local vector relative to the vehicle's orientation
     Vector2 GetGlobalVector (Vector2 global) {
         Vector2 newGlobal = Vector2 (global.x, global.y);
@@ -2203,11 +2491,20 @@ public:
      return local;
      }
      */
-    
+    //bool result = !veh->bumps [bumpID].Value();
     bool MoveWhileTurningDuration (Vector2 direction, float power, float duration, float turnPower) {
         veh->Move (direction, power);
         veh->Turn (-turnPower);
         return (TimeNow() - SM.timeWhenStateChanged > duration);
+    }
+    
+    bool MoveWhileTurningUntilBumpDuration (Vector2 direction, float power, float duration, float turnPower, int bumpID) {
+        bool result = !veh->bumps [bumpID].Value() || (TimeNow() - SM.timeWhenStateChanged > duration);
+        
+        veh->Move (direction, power);
+        veh->Turn (-turnPower);
+        
+        return result;
     }
     
     float minLightValue;
@@ -2226,6 +2523,28 @@ public:
         
         return result;
     }
+    
+    // gathers up min light value if there is not already a valid min light value
+    bool MoveToGetMinLightValueIfInvalidReading (Vector2 direction, float power, float duration) {
+        bool result = false;
+        
+        if (!movementDidNotJustStart) {
+            bool hasLightReading = veh->cds.isRedLight (minLightValue) || veh->cds.isRedLight (minLightValue);
+            if (hasLightReading) {
+                result = true;
+            }
+            movementDidNotJustStart = true;
+        } else {
+            result = MoveToGetMinLightValue (direction, power, duration);
+        }
+        
+        if (result) {
+            movementDidNotJustStart = false;
+        }
+        
+        return result;
+    }
+
     
     void ResetMin () {
         minLightValue = 9999999;
@@ -2363,6 +2682,23 @@ public:
     }
     
     
+    
+    
+    /************************************************ ABORTION STATES ************************************************/
+    
+    
+    bool MoveToCoordinateIfNoLightReading (Vector2 target, float power, int iterations) {
+        bool result = true;
+        bool hasLightReading = veh->cds.isRedLight (minLightValue) || veh->cds.isBlueLight (minLightValue);
+        
+        if (!hasLightReading) {
+            result = PreciseMoveToCoordinate (target, power, iterations);
+        }
+        
+        return result;
+    }
+    
+    
     /*
      * Checks if there is an RPS signal; if there is not, then perform an abort procedure consisting of going in the given global direction (which uses the last valid RPS signal) until there is an RPS signal.
      * @return true when the action is complete, false otherwise.
@@ -2432,6 +2768,10 @@ public:
     void Update () {
         UpdateHardwareInput ();
         
+        if (simulationRunning) {
+            physics.Update ();
+        }
+        
         SM.Update (this);
         
         UpdateHardwareOutput ();
@@ -2451,6 +2791,7 @@ public:
         
         StateFF     * turn_clockwise = new StateFF (this, & Navigator :: TurnCW, 45, 35); // degrees, power
         StateFFI    * turn_clockwise_bump = new StateFFI (this, & Navigator :: TurnUntilBumpCW, 45, 35, D0); // maxDegrees, power, bumpID
+        StateVFFFI   * move_turn_bump_duration = new StateVFFFI (this, & Navigator :: MoveWhileTurningUntilBumpDuration, Vector.D, 35, 10.0, -5.0, D1); // direction, power, maxDuration, turnPower, bumpID
         
         StateVFFII  * move_while_flush = new StateVFFII (this, & Navigator :: MoveWhileFlushDuration, Vector.E, 35, 4.20, F0, F1); // direction, power, duration, bump0, bump1
         StateFF     * set_servo_angle = new StateFF (this, & Navigator :: SetServoAngle, 90, 1.0); // degrees, waitTime
@@ -2539,7 +2880,7 @@ public:
     
     
     // initalize chunks of navigation procedures that directly add states to the statemachine
-    /************************************************ FULL NAVIGATION PROCEDURE CHUNKS ************************************************/
+    /************************************************ NAVIGATION PROCEDURE CHUNKS ************************************************/
     
     
     /*
@@ -2611,6 +2952,9 @@ public:
         StateF      * short_stop = new StateF (this, & Navigator :: StopVehicle, 0.5); // stopTime
         
         StateVFF    * gather_up_min_lightValue = new StateVFF (this, & Navigator :: MoveToGetMinLightValue, Vector.DE, 35, 0.1); // direction, power, duration // MoveToGetMinLightValue
+        StateVFI    * move_to_DDR_light_if_invalid_reading = new StateVFI (this, & Navigator :: MoveToCoordinateIfNoLightReading, Vector2 (23.600 - 0.5, 15.000), 25, 2); // coordinate, power, distanceError // 24, 15 // 22, 15 // 23.5, 14.5 // 23.600 - 0.5
+        StateVFF    * retry_gathering_up_min_lightValue = new StateVFF (this, & Navigator :: MoveToGetMinLightValueIfInvalidReading, Vector.DE, 35, 0.1); // direction, power, duration // MoveToGetMinLightValue
+        
         StateVoid   * blue_shift_using_min = new StateVoid (this, & Navigator :: MoveDurationBlueShiftUsingMin); //
         // StateFF     * global_align_to_DDR = new StateFF (this, & Navigator :: RotateToGlobalAngle, -180, 50); // 179 // (hyp. works) 179+45 // no -135 ... so it is problem with the rotateToGlobal being not accurate
         StateFFI    * global_align_to_DDR = new StateFFI (this, & Navigator :: PreciseRotateToGlobalAngle, -180, 50 / 2.0, 1); // 179 // (hyp. works) 179+45
@@ -2622,8 +2966,14 @@ public:
         
         SM.Add (  global_align_to_DDR  ); // global_align_to_DDR // alignToDDR
         SM.Add (  stop  );
+        
         SM.Add (  gather_up_min_lightValue  );
         SM.Add (  short_stop  );
+        SM.Add (  move_to_DDR_light_if_invalid_reading  );
+        SM.Add (  short_stop  );
+        SM.Add (  retry_gathering_up_min_lightValue  );
+        SM.Add (  short_stop  );
+        
         SM.Add (  blue_shift_using_min  );
         //- SM.Add (  blue_shift_test  );
         SM.Add (  stop  );
@@ -2647,7 +2997,8 @@ public:
         // StateVFFF   * global_move_to_get_down_ramp = new StateVFFF (this, & Navigator :: GlobalMoveUntilBelowY, Vector.down, 65, 15.0, 18); // direction, power, timeOutDuration, yValue
         // StateVFFF   * global_move_to_get_up_ramp = new State (this, & Navigator :: GlobalMoveUntilAboveY, Vector.up, 65, 15, 50); // direction, power, timeOutDuration, yValue // 20.0
         // StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: GlobalMoveWhileTurningUntilAboveY, Vector2 (1, 4).getUnitVector (), 60, 60.0, 10, 50); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15
-        StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: GlobalMoveWhileTurningWithAbortUntilAboveY, Vector2 (1, 4).getUnitVector (), 80, 60.0, 10, 50-2); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15
+        //- StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: GlobalMoveWhileTurningWithAbortUntilAboveY, Vector2 (1, 4).getUnitVector (), 80, 60.0, 10, 50-2); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15
+        StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: PhysicsMoveWhileTurningUntilAboveY, Vector2 (0.1, 1.0).getUnitVector (), 80, 60.0, 10, 50-2); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15
         StateFF     * align_to_global_angle_before_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 50);
         StateFF     * slower_align_to_global_angle_before_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 25);
         // StateVFF    * abortion_tester = new StateVFF (this, & Navigator :: GlobalMoveDuration, Vector.up, 35,  1.0); // direction, power, duration
@@ -2778,6 +3129,7 @@ public:
         StateVFF    * move_after_token = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (7, 50), 50, 0.0); // coordinate, power, iterations
         StateFF     * rotate_to_face_left_wall = new StateFF (this, & Navigator :: RotateToGlobalAngle, -30, 35); // degrees, power // rotation angle may be incorrect
         StateVFI    * bump_into_left_wall = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 50, D0); // direction, power, bumpID
+        StateVFFFI  * turn_until_bump_to_make_even = new StateVFFFI (this, & Navigator :: MoveWhileTurningUntilBumpDuration, Vector.D, 15, 10.0, 35, D1); // direction, power, maxDuration, turnPower, bumpID
         
         StateVFF    * move_upward_real_quick = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 8 * L_A_D); // direction, power, distance // 10 = about after gap
         StateVFF    * move_back_from_left_wall = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 50, 1.0 * L_A_D); // direction, power, distance // 2.0
@@ -2796,9 +3148,13 @@ public:
         SM.Add (  stop  );
         SM.Add (  rotate_to_face_left_wall  );
         SM.Add (  stop  );
+        
         // 1. bump into left wall
         SM.Add (  bump_into_left_wall  );
         SM.Add (  stop  );
+        SM.Add (  turn_until_bump_to_make_even  );
+        SM.Add (  stop  );
+        
         // 2. go up real quick for distance until around the gap
         SM.Add (  move_upward_real_quick  );
         SM.Add (  stop  );
@@ -2923,8 +3279,9 @@ public:
         StateFF     * align_to_foosball = new StateFF (this, & Navigator :: TurnCW, 15, 35); // degrees, power // 15 // 25
         StateVFI    * move_right_parralel_to_rod_until_bump = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.F, 40, F0); // direction, power, bumpID
         StateVFI    * move_up_to_get_snug_with_foosball_box = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.DE, 35, D1); // direction, power // 0.16 // .25 // 0.20
-        StateVFI    * move_right_parralel_to_rod_until_bump_again = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.F, 20 + 20, F0); // direction, power, bumpID
-        
+        // StateVFI    * move_right_parralel_to_rod_until_bump_again = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.F, 20 + 20, F0); // direction, power, bumpID
+        StateVFFFI  * rotate_until_bump_to_get_snug = new StateVFFFI (this, & Navigator :: MoveWhileTurningUntilBumpDuration, Vector.F, 15, 10.0, 35, F1); // direction, power, maxDuration, turnPower, bumpID
+
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
         
@@ -2937,11 +3294,14 @@ public:
         // move rightwards until the rightmost bump switch touches the wall
         SM.Add (  move_right_parralel_to_rod_until_bump  );
         SM.Add (  stop  );
+        SM.Add (  rotate_until_bump_to_get_snug  );
+        SM.Add (  stop  );
         // do adjustments necessary so that the vehicle is snug against the wall
         SM.Add (  move_up_to_get_snug_with_foosball_box  );
         SM.Add (  stop  );
-        SM.Add (  move_right_parralel_to_rod_until_bump_again  );
-        SM.Add (  stop  );
+        
+        // SM.Add (  move_right_parralel_to_rod_until_bump_again  );
+        // SM.Add (  stop  );
     }
     
     /*
@@ -3435,7 +3795,7 @@ void Init () {
     // initialize vehicle for subsimulation
     subSimulationVehicle = Vehicle (vehicle);
     subSimulationVehicle.color = WHITE;
-    // subSimulationVehicle.isSimulated = true;
+    subSimulationVehicle.isSimulated = true;
     
     vehicle.color = MAGENTA; // set the color in which the vehicle will appear as on the course rendering
     
@@ -3527,7 +3887,7 @@ void DrawEverything () {
         LCD.SetFontColor (RED);
         course.DrawVehicleVectors (simulatedVehicle);
     }
-    if (SUB_SIMULATION_ENABLED) {
+    if (true || navigator.IsSimulationRunning ()) { // SUB_SIMULATION_ENABLED
         LCD.SetFontColor (subSimulationVehicle.color);
         course.DrawRealVehicle (subSimulationVehicle);
         LCD.SetFontColor (RED);
@@ -3657,9 +4017,11 @@ void mainLoop () {
         // update the simulated vehicle every code iteration; will adjust the simulated vehicle's position and angle
         simulation.Update ();
     }
+    /*
     if (SHOULD_SUB_SIMULATION_ALWAYS_RUN) {
         physics.Update ();
     }
+    */
     
     if (actionButt0.IsBeingPressed (touch)) { // checks if the button was pressed and updates the state of the button
         vehicle.servo.SetDegree (LOWERED_SERVO_ANGLE); // sets the servo's angle to 15 degrees
