@@ -167,6 +167,15 @@ public:
         // cout << "Angle: " << angle << endl;
         return angle;
     }
+    float getEvenBetterAngle () {
+        // x-axis = Vector2 (1.0, 0.0)
+        
+        float dot = x * 1.0 + y * 0.0;
+        float determinant = x * 0.0 - y * 1.0;
+        float angle = -atan2 (determinant, dot) / DEGREES_TO_RADS + 90;
+        
+        return angle;
+    }
     /*
     // gets angle formed by the vector
     float getBetterAngle () {

@@ -1,6 +1,6 @@
 #define IS_SIMULATION 1 // also have to define this variable in Simulation.hpp and Classes.hpp
-// #define SUB_SIMULATION_ENABLED 1
-// #define LIMIT_SIMULATION 1
+#define SUB_SIMULATION_ENABLED 1
+// #define FULL_SIMULATION 1
 #if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
  
@@ -335,8 +335,8 @@ class Course;
 #define D1 0
 #define F0 1
 
-#define LOWERED_SERVO_ANGLE 65
-#define RAISED_SERVO_ANGLE 170
+#define LOWERED_SERVO_ANGLE 75 // 65 // 85
+#define RAISED_SERVO_ANGLE 170 // 170
 
 #define CLICK_MODE 1 // currently simulation only; for graphic use; if enabled, sets the vehicle's position to the position clicked on the screen
 
@@ -705,7 +705,9 @@ public:
         // firstTargetWaypoint = Vector2 (24.343 + 2, 12.343 + 1); // DDR
         // secondTargetWaypoint = Vector2 (14.743, 39.771 + 3); // TOKEN
         
+        // should change this to the start point
         firstTargetWaypoint = Vector2 (31.199, 12.800); // somewhere in the far corner by the ddr
+        firstTargetWaypoint = Vector2 (8.800, 11.300); // at the start
     }
     float x;
     float y;
@@ -942,22 +944,18 @@ public:
         subSimulation.timeSinceUpdate = TimeNow ();
         // heading = rps.Heading ();
         // justResumed = true;
-        // Update ();
+        UpdateRPSOrientation ();
     }
     
-    void SetPositionToRPS () {
-        // veh->SetPosition (rps.Pos ()); // - 6.0 * 12
-        // Vector2 updatedPosition = Vector2 (rps.X (), rps.Y () - 6 * 12); // off by a bit because of calibration
+    void UpdateRPSOrientation () {
         Vector2 updatedPosition = Vector2 (rps.lastValidCoordinate.x, rps.lastValidCoordinate.y - 6 * 12); // off by a bit because of calibration
         veh->SetPosition (updatedPosition);
-        // veh->SetRotation (rps.Heading ()); // rps.Heading () + 240.0 - 60.0
-        // veh->SetRotation (rps.Heading () + 240.0 - 60.0);
         veh->SetRotation (Vector2::BetterCapDegrees (rps.Heading () - startAngle));
-        // veh->SetRotation (Vector2::DegreesToVector2 ( rps.Heading () - startAngle));
     }
     
     void Update () {
         float previousHeading = heading;
+        Vector2 previousDir = Vector2 (veh->dir.x, veh->dir.y);
         /*
         if (justResumed) {
             previousHeading = rps.Heading ();
@@ -991,6 +989,64 @@ public:
         }
         */
         // heading = veh->dir.getNotMessedUpVehicleDirAngle ();
+        
+        // Vector2 vehicleDirection = Vector2 (veh->dir.x, veh->dir.y);
+
+        /*&
+        if (veh->dir.x <= 0) {
+            // dvehicleDirection.x *= -1;
+            veh->dir = Vector2 (0, 1.0);
+        }
+        if (veh->dir.y < 0) {
+            // vehicleDirection.x *= -1;
+            // veh->dir.y = abs (veh->dir.y);
+            // veh->dir = Vector2 (0, 1.0);
+        }
+        */
+        heading = Vector2::CapDegrees (veh->dir.getEvenBetterAngle () + 30 - startAngle);
+        
+        /*
+        // if (ang >= 125 && ang < 135) {
+        if (previousHeading > 150 && previousHeading < 160 && SignOf (previousDir.x) == -1 && SignOf (previousDir.y) == 1   &&   SignOf (veh->dir.x) == 1 && SignOf (veh->dir.y) == -1) { // ang == 130
+            // vehicleDirection.x *= -1;
+            // veh->dir.y = abs (veh->dir.y);
+            // veh->dir = Vector2 (0, 1.0);
+            // veh->dir = Vector2 (-veh->dir.x, -veh->dir.y);
+            // veh->dir.x *= -1;
+            // veh->dir.y *= -1;
+            float prevAngle = previousDir.getEvenBetterAngle ();
+            Vector2 newDir = Vector2 (0.0, 1.0);
+            float skipAmount = 10.0;
+            newDir.Rotate (prevAngle + skipAmount);
+            // veh->dir.x = newDir.x;
+            // veh->dir.y = newDir.y;
+            // veh->SetRotation (prevAngle + skipAmount);
+            veh->SetRotation (newDir);
+            // veh->dir.Rotate (-90);
+            // veh->dir = Vector2 (-1, 0);
+            cout << "Oi" << endl;
+            cout << "prev = " << prevAngle << endl;
+            cout << "prev+skip = " << prevAngle + skipAmount << endl;
+            // heading = Vector2::BetterCapDegrees (heading - 180);
+            heading = prevAngle + skipAmount;
+        }
+        */
+        
+        // heading = Vector2::CapDegrees (veh->dir.getEvenBetterAngle () + 30 - startAngle);
+        
+        heading = Vector2::CapDegrees (veh->dir.getBetterAngle () + 30 - startAngle);
+        
+        float rpsHeading = rps.Heading ();
+        // float headingDiff = Vector2::BetterCapDegrees (heading) - rpsHeading;
+        // float headingMinus180Diff = Vector2::BetterCapDegrees (heading - 180) - rpsHeading;
+        float headingDiff = Vector2::getDegreeDistance (heading, rpsHeading);
+        float headingMinus180Diff = Vector2::getDegreeDistance (heading - 180, rpsHeading);
+
+        if (abs (headingDiff) > abs (headingMinus180Diff)) {
+            heading = Vector2::BetterCapDegrees (heading - 180);
+        }
+        
+        /*-
         heading = Vector2::CapDegrees (veh->dir.getBetterAngle () + 30 - startAngle);
         
         if (shouldFlip) {
@@ -1006,8 +1062,9 @@ public:
         }
         
         if (shouldFlip) {
-            heading = Vector2::BetterCapDegrees (heading - 180);
+            // heading = Vector2::BetterCapDegrees (heading - 180);
         }
+        */
         
         /*
         if (justResumed) {
@@ -1054,7 +1111,7 @@ public:
     }
     float Y () {
         // return rps.ToCourseY (veh->pos.y - 6 * 12);
-        return rps.Y ();
+        return rps.Y () * 0;
     }
     float Heading () {
         return rps.Heading () * 0;
@@ -1445,7 +1502,7 @@ public:
         timeWhenStateChanged = 0;
     }
     // vector<State*> states; // state data vector
-    State *states [999]; // was 64 // 180
+    State *states [200]; // was 64 // 180
     int length; // the length of the state data vector
     int currentState;
     float timeWhenStateChanged;
@@ -1501,8 +1558,8 @@ private:
 #define F_A_D 1.0 // used to accomodate variances in the Proteus's power for the foosball task by altering distances
 #define F_A_P 0.8 // used to accomodate variances in the Proteus's power for the foosball task by altering power
 
-#define L_A_D 1.0 // used to accomodate variances in the Proteus's power for the lever task by altering distances
-#define L_A_P 1.0 // used to accomodate variances in the Proteus's power for the lever task by altering power
+#define L_A_D 0.8 // 1.0 // used to accomodate variances in the Proteus's power for the lever task by altering distances
+// #define L_A_P 1.0 // used to accomodate variances in the Proteus's power for the lever task by altering power
 
 class Navigator {
 public:
@@ -1510,9 +1567,11 @@ public:
         veh = vehicle;
         SM = StateMachine ();
         
+        initialized = false;
+        
         // initialize constants
         
-        STOP_DURATION = 1.0;
+        STOP_DURATION = 0.5;
         
         // initialize global variables
         
@@ -1560,6 +1619,8 @@ public:
         max_angular_velocity = DEFAULT_MAX_ANGULAR_VELOCITY;
         max_velocity = DEFAULT_MAX_VELOCITY;
         
+        DDRCoordinate = Vector2 (23.600 - 0.5, 15.000);
+        
         // add states to the statemachine to perform the navigation procedure specified in the method below
         // PerformanceTestFour ();
     }
@@ -1568,6 +1629,8 @@ public:
     }
     Vehicle *veh;
     StateMachine SM;
+    
+    bool initialized;
     
     float timeWhenRotationStarted;
     float timeRequiredForRotation;
@@ -1610,6 +1673,9 @@ public:
     Vector2 calibrationStartPoint;
     float calibrationStartRotation;
     
+    Vector2 DDRCoordinate; // coordinate used for navigating to DDR
+    
+    
     // PHYSICS FUNCTIONS
     
     // returns if the simulation is running
@@ -1642,6 +1708,9 @@ public:
     // restores the vehicle's default max angular velocity
     void RestoreDefaultMaxAngularVelocity () {
         max_angular_velocity = DEFAULT_MAX_ANGULAR_VELOCITY;
+    }
+    void SetDDRCoordinate (Vector2 coordinate) {
+        DDRCoordinate = coordinate; // copies by reference
     }
     
     // calculates and returns the vehicles maximum velocity (which is the vehicle's hypothetical velocity at 100% power, assuming power and distance are linear)
@@ -2393,12 +2462,16 @@ public:
             // veh->Turn (-turnPower);
         }
         if (movementDidNotJustStart) {
+            if (simulationRunning) {
+                physics.Update ();
+            }
             result = physics.Y () >= yValue || TimeNow() - SM.timeWhenStateChanged > timeOutDuration;
             
             // if (rps.IsLikelyNewSignal()) {
-            // cout << "veh dir = " << physics.veh->dir.x << ", " << physics.veh->dir.y << endl;
-            // cout << "rps heading = " << rps.Heading () << endl;
-            // cout << "physics heading = " << physics.Heading () << endl << endl;
+            cout << "veh dir = " << physics.veh->dir.x << ", " << physics.veh->dir.y << endl;
+            cout << "rps heading = " << rps.Heading () << endl;
+            cout << "physics heading = " << physics.Heading () << endl;
+            cout << "physics angvelocity = " << physics.veh->angVel << endl << endl;
             // }
             
             if (result) {
@@ -2563,8 +2636,10 @@ public:
         } else if (veh->cds.isBlueLight (minLightValue) || isBlue) {
             // cout << "Do blue." << endl;
             isBlue = true;
-            veh->Move (Vector.DE, 35);
-            complete = (TimeNow()-SM.timeWhenStateChanged > .7); // .85
+            //- veh->Move (Vector.DE, 35);
+            //- complete = (TimeNow()-SM.timeWhenStateChanged > .7); // .85
+            Vector2 blueDDRCoordinate = Vector2 (DDRCoordinate.x + 5.0, DDRCoordinate.y);
+            complete = PreciseMoveToCoordinate (blueDDRCoordinate, 35, 1);
         } else {
             // cout << "Timed out." << endl;
             // complete = (TimeNow()-SM.timeWhenStateChanged > 2.0); // time-out error
@@ -2769,10 +2844,14 @@ public:
         UpdateHardwareInput ();
         
         if (simulationRunning) {
-            physics.Update ();
+            // physics.Update ();
         }
         
-        SM.Update (this);
+        // cout << simulationRunning << endl;
+        
+        if (initialized) {
+            SM.Update (this);
+        }
         
         UpdateHardwareOutput ();
     }
@@ -2914,12 +2993,17 @@ public:
         StateFF     * calibration_rotation = new StateFF (this, & Navigator :: CalibrateRotation, 50, 2.0); // 35, 3.0
         StateFFI    * global_align_to_DDR = new StateFFI (this, & Navigator :: PreciseRotateToGlobalAngle, -180, 50, 1); // 179 // (hyp. works) 179+45
         // StateVFF    * initial_move = new StateVFF (this, & Navigator :: MoveDuration, Vector.F, 35, 0.8); // direction, power, duration // StateVFF
-        StateVFF    * initial_move = new StateVFF (this, & Navigator :: CalibrateDistance, Vector.F, 50, 1.7); // direction, power, duration // 0.8 // 2.0
+        //- StateVFF    * initial_move = new StateVFF (this, & Navigator :: CalibrateDistance, Vector.F, 50, 1.7); // direction, power, duration // 0.8 // 2.0
+        // StateVFF    * initial_move = new StateVFF (this, & Navigator :: CalibrateDistance, Vector.FA, 75, 1.7); // direction, power, duration // 0.8 // 2.0
+        StateVFF    * initial_move = new StateVFF (this, & Navigator :: CalibrateDistance, Vector.FA, 25, 4.0); // direction, power, duration // 0.8 // 2.0
         // StateFF     * initial_turn = new StateFF (this, & Navigator :: TurnCW, 135, 50); // degrees, power // increased from 35
         // StateVFF    * move_duration_DE = new StateVFF (this, & Navigator :: MoveDuration, Vector.DE, 35, 2.9-0.45); // direction, power, duration
         // robot at DDR = 23.599, 15.000; was 22.5, 14.5
-        StateVFI    * move_to_DDR_light = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (23.600 - 0.5, 15.000), 50, 3); // coordinate, power, distanceError // 24, 15 // 22, 15 // 23.5, 14.5 // 23.600 - 0.5
-        
+        // Vector2 DDRSpot = Vector2 (23.600 - 0.5, 15.000);
+        Vector2 DDRSpot = DDRCoordinate;
+        StateVFI    * move_to_DDR_light = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, DDRSpot, 50, 1); // coordinate, power, distanceError // 24, 15 // 22, 15 // 23.5, 14.5 // 23.600 - 0.5
+        StateVFI    * move_to_DDR_light_2 = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, DDRSpot, 25, 2); // coordinate, power, distanceError // 24, 15 // 22, 15 // 23.5, 14.5 // 23.600 - 0.5
+
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
         
@@ -2938,6 +3022,8 @@ public:
         // SM.Add (  move_to_DDR_light  );
         // SM.Add (  move_to_DDR_light  );
         SM.Add (  stop  );
+        SM.Add (  move_to_DDR_light_2  );
+        SM.Add (  stop  );
     }
     
     
@@ -2949,15 +3035,16 @@ public:
         // *********** INITIALIZE state objects *********** //
         
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
-        StateF      * short_stop = new StateF (this, & Navigator :: StopVehicle, 0.5); // stopTime
+        StateF      * short_stop = new StateF (this, & Navigator :: StopVehicle, 0.25); // stopTime
         
+        Vector2 DDRSpot = DDRCoordinate;
         StateVFF    * gather_up_min_lightValue = new StateVFF (this, & Navigator :: MoveToGetMinLightValue, Vector.DE, 35, 0.1); // direction, power, duration // MoveToGetMinLightValue
-        StateVFI    * move_to_DDR_light_if_invalid_reading = new StateVFI (this, & Navigator :: MoveToCoordinateIfNoLightReading, Vector2 (23.600 - 0.5, 15.000), 25, 2); // coordinate, power, distanceError // 24, 15 // 22, 15 // 23.5, 14.5 // 23.600 - 0.5
+        StateVFI    * move_to_DDR_light_if_invalid_reading = new StateVFI (this, & Navigator :: MoveToCoordinateIfNoLightReading, DDRSpot, 25, 2); // coordinate, power, distanceError // 24, 15 // 22, 15 // 23.5, 14.5 // 23.600 - 0.5
         StateVFF    * retry_gathering_up_min_lightValue = new StateVFF (this, & Navigator :: MoveToGetMinLightValueIfInvalidReading, Vector.DE, 35, 0.1); // direction, power, duration // MoveToGetMinLightValue
         
         StateVoid   * blue_shift_using_min = new StateVoid (this, & Navigator :: MoveDurationBlueShiftUsingMin); //
         // StateFF     * global_align_to_DDR = new StateFF (this, & Navigator :: RotateToGlobalAngle, -180, 50); // 179 // (hyp. works) 179+45 // no -135 ... so it is problem with the rotateToGlobal being not accurate
-        StateFFI    * global_align_to_DDR = new StateFFI (this, & Navigator :: PreciseRotateToGlobalAngle, -180, 50 / 2.0, 1); // 179 // (hyp. works) 179+45
+        StateFFI    * global_align_to_DDR = new StateFFI (this, & Navigator :: PreciseRotateToGlobalAngle, -180, 50 / 4.0, 1); // 179 // (hyp. works) 179+45
         StateVFF    * move_button_F = new StateVFF (this, & Navigator :: MoveDuration, Vector.F, 35, 1.05); // direction, power, duration
         StateF      * hold_button = new StateF (this, & Navigator :: StopVehicle, 5.0); // stopTime
         
@@ -2995,9 +3082,9 @@ public:
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
         StateVFF    * get_centered_on_ramp = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (30, 20.0), 50,  0.0); // coordinate, power, distanceError
         // StateVFFF   * global_move_to_get_down_ramp = new StateVFFF (this, & Navigator :: GlobalMoveUntilBelowY, Vector.down, 65, 15.0, 18); // direction, power, timeOutDuration, yValue
-        // StateVFFF   * global_move_to_get_up_ramp = new State (this, & Navigator :: GlobalMoveUntilAboveY, Vector.up, 65, 15, 50); // direction, power, timeOutDuration, yValue // 20.0
-        // StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: GlobalMoveWhileTurningUntilAboveY, Vector2 (1, 4).getUnitVector (), 60, 60.0, 10, 50); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15
-        //- StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: GlobalMoveWhileTurningWithAbortUntilAboveY, Vector2 (1, 4).getUnitVector (), 80, 60.0, 10, 50-2); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15
+        //x StateVFFF   * global_move_to_get_up_ramp = new State (this, & Navigator :: GlobalMoveUntilAboveY, Vector.up, 65, 15, 50); // direction, power, timeOutDuration, yValue // 20.0
+        //x StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: GlobalMoveWhileTurningUntilAboveY, Vector2 (1, 4).getUnitVector (), 60, 60.0, 10, 50); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15
+        // StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: GlobalMoveWhileTurningWithAbortUntilAboveY, Vector2 (1, 4).getUnitVector (), 80, 60.0, 10, 50-2); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15
         StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: PhysicsMoveWhileTurningUntilAboveY, Vector2 (0.1, 1.0).getUnitVector (), 80, 60.0, 10, 50-2); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15
         StateFF     * align_to_global_angle_before_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 50);
         StateFF     * slower_align_to_global_angle_before_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 25);
@@ -3048,8 +3135,9 @@ public:
         StateVFI    * move_left_to_token = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (20, 50), 50, 1); // coordinate, power, AssistedMoveToCoordinate
         
         // robot at token dispenser = 13.800, 42.800; was 14.0, 45
-        Vector2 tokenDropSpot = Vector2 (13.800 + 1.2, 44.0); // 15.5, 43 // 15.0, 45 // was working when 2.0; could be more centered // 1.7 // 1.5
-        
+        // Vector2 tokenDropSpot = Vector2 (13.800 + 1.2, 44.0); // 15.5, 43 // 15.0, 45 // was working when 2.0; could be more centered // 1.7 // 1.5
+        Vector2 tokenDropSpot = Vector2 (13.800 + 1.2 + 0.5, 44.0);
+
         // StateVFF    * move_dir_to_token = new StateVFF (this, & Navigator :: AssistedMoveToCoordinate, tokenDropSpot, 50, 0.0); // coordinate, power, distanceError
         StateVFI    * move_dir_to_token = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, tokenDropSpot, 50, 1); // coordinate, power, distanceError
         StateVFI    * precise_move_dir_to_token = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, tokenDropSpot, 50 * 0.50, 3); // coordinate, power, distanceError
@@ -3085,38 +3173,35 @@ public:
         StateFF     * raise_servo = new StateFF (this, & Navigator :: SetServoAngle, RAISED_SERVO_ANGLE, 1.0); // degrees, waitTime
         
         // StateFF     * rotate_to_token = new StateFF (this, & Navigator :: TurnCCW, 180, 35); // degrees, power
-        StateFF     * global_rotate_to_token = new StateFF (this, & Navigator :: RotateToGlobalAngle, 60, 35); // degrees, power
+        // StateFF     * global_rotate_to_token = new StateFF (this, & Navigator :: RotateToGlobalAngle, 60, 35); // degrees, power
+        StateFFI     * global_rotate_to_token = new StateFFI (this, & Navigator :: PreciseRotateToGlobalAngle, 60, 35, 1); // degrees, power, iterations
+        StateFFI     * global_rotate_to_token_with_less_power = new StateFFI (this, & Navigator :: PreciseRotateToGlobalAngle, 60, 12.5, 1); // degrees, power, iterations
         //- StateVFF    * move_to_token_again = new StateVFF (this, & Navigator :: MoveDistance, Vector.BC, 35, 0.5); // EF // was 1.4
         // StateVFF    * move_to_token_again = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 35, 0.5); // EF // was 1.4
         StateVFI    * touch_the_token = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 35, D0); // direction, power, bumpID
         // StateVFF    * align_after_touching_token = new StateVFF (this, & Navigator :: MoveDuration, Vector.D, 25, 0.1); // direction, power, duration
         // StateFFI    * align_after_touching_token_2 = new StateFFI (this, & Navigator :: TurnUntilBumpCCW, 900, 35, D1);
-        StateVFF    * move_back_from_token = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 35, 0.5); // EF // was 2.0 // then 1.5 // 2.0 // 1.5
+        //- StateVFF    * move_back_from_token = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 35, 0.5); // EF // was 2.0 // then 1.5 // 2.0 // 1.5
         
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
         
         SM.Add (  global_rotate_to_token  );
         SM.Add (  stop  ); // move_to_token_again
-        SM.Add (  global_rotate_to_token  );
+        SM.Add (  global_rotate_to_token_with_less_power  );
         SM.Add (  stop  ); // move_to_token_again
         // SM.Add (  move_to_token_again  );
         // SM.Add (  stop  );
         
         SM.Add (  touch_the_token  );
         SM.Add (  stop  );
-        SM.Add (  move_back_from_token  );
-        SM.Add (  stop  );
+        // SM.Add (  move_back_from_token  );
+        // SM.Add (  stop  );
         
         SM.Add (  lower_servo_for_token  );
         SM.Add (  raise_servo  );
     }
     
-    
-    /*
-     * START: The robot is facing the token dispenser on the top platform.
-     * END: The robot is at the lever.
-     */
     void GetToLever () {
         // *********** INITIALIZE state objects *********** //
         
@@ -3128,8 +3213,101 @@ public:
         
         StateVFF    * move_after_token = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (7, 50), 50, 0.0); // coordinate, power, iterations
         StateFF     * rotate_to_face_left_wall = new StateFF (this, & Navigator :: RotateToGlobalAngle, -30, 35); // degrees, power // rotation angle may be incorrect
+        StateFF     * rotate_to_face_left_wall_with_less_power = new StateFF (this, & Navigator :: RotateToGlobalAngle, -30, 35 / 2.0); // degrees, power // rotation angle may be incorrect
         StateVFI    * bump_into_left_wall = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 50, D0); // direction, power, bumpID
-        StateVFFFI  * turn_until_bump_to_make_even = new StateVFFFI (this, & Navigator :: MoveWhileTurningUntilBumpDuration, Vector.D, 15, 10.0, 35, D1); // direction, power, maxDuration, turnPower, bumpID
+        StateVFFFI  * turn_until_bump_to_make_even = new StateVFFFI (this, & Navigator :: MoveWhileTurningUntilBumpDuration, Vector.D, 35, 10.0, 35, D1); // direction, power, maxDuration, turnPower, bumpID
+        
+        StateVFF    * move_upward_real_quick = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 8 * L_A_D); // direction, power, distance // 10 = about after gap
+        StateVFF    * move_back_from_left_wall = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 50, 1.0 * L_A_D); // direction, power, distance // 2.0
+        
+        StateFF     * rotate_to_lever = new StateFF (this, & Navigator :: TurnCW, 45, 50); // degrees, power // 15
+        StateVFF    * move_right_before_bump = new StateVFF (this, & Navigator :: MoveDistance, Vector.E, 50, 5.0 * L_A_D); // direction, power
+        StateVFI    * bump_into_lever_wall = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 50, D0); // direction, power, bumpID
+        
+        StateVFF    * move_back_from_lever_wall = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 50, 1.35 * L_A_D); // direction, power // 3.0 // 2.0
+        // StateVFF    * move_right_before_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 2.15 * L_A_D); // direction, power // 2.0
+
+        StateVFFI    * move_right_before_lever_until_bump_1 = new StateVFFI (this, & Navigator :: MoveUntilBumpDuration, Vector.E, 30, 10.0, F0); // direction, power, maxDuration, bumpID
+        StateVFFI    * move_right_before_lever_until_bump_2 = new StateVFFI (this, & Navigator :: MoveUntilBumpDuration, Vector.E, 30, 5.0, D1); // direction, power, maxDuration, bumpID
+        StateVFF    * move_left_before_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.BC, 35, 6.0 * L_A_D); // direction, power // 50
+
+        
+        // *********** ADD REFERENCES of state objects to state machine *********** //
+        
+        SM.Add (  move_after_token  );
+        SM.Add (  stop  );
+        SM.Add (  rotate_to_face_left_wall  );
+        SM.Add (  stop  );
+        SM.Add (  rotate_to_face_left_wall_with_less_power  );
+        SM.Add (  stop  );
+        
+        // 1. bump into left wall
+        SM.Add (  bump_into_left_wall  );
+        SM.Add (  stop  );
+        SM.Add (  turn_until_bump_to_make_even  );
+        SM.Add (  stop  );
+        
+        // 2. go up real quick for distance until around the gap
+        SM.Add (  move_upward_real_quick  );
+        SM.Add (  stop  );
+        
+        // 3. move back from wall
+        SM.Add (  move_back_from_left_wall  );
+        SM.Add (  stop  );
+        
+        // 4. rotate towards lever wall
+        SM.Add (  rotate_to_lever  );
+        SM.Add (  stop  );
+        // move right
+        SM.Add (  move_right_before_bump  );
+        SM.Add (  stop  );
+        // 5. bump into the level wall
+        SM.Add (  bump_into_lever_wall  );
+        SM.Add (  stop  );
+        
+        /*
+        // 6. backup from the lever wall
+        SM.Add (  move_back_from_lever_wall  );
+        SM.Add (  stop  );
+        // 7. move rightward until at lever
+        SM.Add (  move_right_before_lever  );
+        SM.Add (  stop  );
+        */
+        // move to get into that corner
+        SM.Add (  move_right_before_lever_until_bump_1  );
+        SM.Add (  stop  );
+        SM.Add (  move_right_before_lever_until_bump_2  );
+        SM.Add (  stop  );
+        
+        // move left to get in front of lever
+        SM.Add (  move_left_before_lever  );
+        SM.Add (  stop  );
+        
+        // back up from the lever wall
+        SM.Add (  move_back_from_lever_wall  );
+        SM.Add (  stop  );
+    }
+
+    
+    /*
+     * START: The robot is facing the token dispenser on the top platform.
+     * END: The robot is at the lever.
+     */
+    /*
+    void GetToLever () {
+        // *********** INITIALIZE state objects *********** //
+        
+        StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
+        
+        // StateVFI    * move_to_below_lever = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (5, 44), 50, 3); // coordinate, power, iterations
+        // StateFF     * global_rotate_to_lever = new StateFF (this, & Navigator :: RotateToGlobalAngle, -75, 35); // degrees, power
+        // StateVFI    * move_to_lever = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (10.0, 66), 50,  1); // coordinate, power, distanceError // 10, 62 // 12, 64 // 10.5, 66
+        
+        StateVFF    * move_after_token = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (7, 50), 50, 0.0); // coordinate, power, iterations
+        StateFF     * rotate_to_face_left_wall = new StateFF (this, & Navigator :: RotateToGlobalAngle, -30, 35); // degrees, power // rotation angle may be incorrect
+        StateFF     * rotate_to_face_left_wall_with_less_power = new StateFF (this, & Navigator :: RotateToGlobalAngle, -30, 35 / 2.0); // degrees, power // rotation angle may be incorrect
+        StateVFI    * bump_into_left_wall = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 50, D0); // direction, power, bumpID
+        StateVFFFI  * turn_until_bump_to_make_even = new StateVFFFI (this, & Navigator :: MoveWhileTurningUntilBumpDuration, Vector.D, 35, 10.0, 35, D1); // direction, power, maxDuration, turnPower, bumpID
         
         StateVFF    * move_upward_real_quick = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 8 * L_A_D); // direction, power, distance // 10 = about after gap
         StateVFF    * move_back_from_left_wall = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 50, 1.0 * L_A_D); // direction, power, distance // 2.0
@@ -3147,6 +3325,8 @@ public:
         SM.Add (  move_after_token  );
         SM.Add (  stop  );
         SM.Add (  rotate_to_face_left_wall  );
+        SM.Add (  stop  );
+        SM.Add (  rotate_to_face_left_wall_with_less_power  );
         SM.Add (  stop  );
         
         // 1. bump into left wall
@@ -3179,6 +3359,7 @@ public:
         SM.Add (  move_right_before_lever  );
         SM.Add (  stop  );
     }
+    */
     
     /*
      // using move to coordinate / rps
@@ -3274,13 +3455,13 @@ public:
         // *********** INITIALIZE state objects *********** //
         
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
-        StateVFF    * move_right_after_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 2.5); // direction, power // 0.15 (duration) // 4.0 ... 3.0 ... 2.85
+        StateVFF    * move_right_after_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 2.0); // direction, power // 0.15 (duration) // 4.0 ... 3.0 ... 2.85 // 2.5
         
         StateFF     * align_to_foosball = new StateFF (this, & Navigator :: TurnCW, 15, 35); // degrees, power // 15 // 25
         StateVFI    * move_right_parralel_to_rod_until_bump = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.F, 40, F0); // direction, power, bumpID
-        StateVFI    * move_up_to_get_snug_with_foosball_box = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.DE, 35, D1); // direction, power // 0.16 // .25 // 0.20
+        StateVFI    * move_up_to_get_snug_with_foosball_box = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.E, 35, D1); // direction, power // 0.16 // .25 // 0.20 // DE
         // StateVFI    * move_right_parralel_to_rod_until_bump_again = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.F, 20 + 20, F0); // direction, power, bumpID
-        StateVFFFI  * rotate_until_bump_to_get_snug = new StateVFFFI (this, & Navigator :: MoveWhileTurningUntilBumpDuration, Vector.F, 15, 10.0, 35, F1); // direction, power, maxDuration, turnPower, bumpID
+        StateVFFFI  * rotate_until_bump_to_get_snug = new StateVFFFI (this, & Navigator :: MoveWhileTurningUntilBumpDuration, Vector.F, 35, 10.0, 35, F1); // direction, power, maxDuration, turnPower, bumpID
 
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
@@ -3583,8 +3764,12 @@ public:
     
     // adds states to the statemachine; should only be called once
     void Initialize () {
-        // add states to the statemachine that perform the navigation procedure specified in the below method
-        FinalCompetition ();
+        if (!initialized) {
+            DDRCoordinate = Vector2 (rps.ToCourseX (DDRCoordinate.x), rps.ToCourseY (DDRCoordinate.y));
+            // add states to the statemachine that perform the navigation procedure specified in the below method
+            FinalCompetition ();
+            initialized = true;
+        }
     }
     // resets the navigator object and stops the vehicle (resets state variables and that sort of thing)
     void Reset () {
@@ -3596,8 +3781,14 @@ public:
     }
     // starts the navigation procedure; does this by setting state = 1
     void Start () {
+        Initialize ();
         SM.Start ();
     }
+    /*
+    void StartAndInitialize () {
+        SM.Start ();
+    }
+    */
     Vectors Vector;
 private:
 };
@@ -3656,7 +3847,8 @@ Button butt;
 Button cancelButt;
 Button actionButt0;
 Button actionButt1;
-Button calibrateButt;
+Button calibrateButt0;
+Button calibrateButt1;
 
 StateIndicator indicatorCDS;
 StateIndicator indMisc0;
@@ -3722,10 +3914,14 @@ void Init () {
     indMotor1.UpdateColors (LIGHTGRAY);
     indMotor2.UpdateColors (LIGHTGRAY);
     
-    strcpy (charPtr, "CALIBRATE"); // use charPtr to set the text of the button
+    strcpy (charPtr, "CAL"); // use charPtr to set the text of the button
     // initialize the reset button where its parameters are the same as the one's mentioned above
-    calibrateButt = Button (  Box ( Vector2 (BUTT_X_POS, -MOTOR_IND_Y_POS - MOTOR_IND_MARGIN*3 - MOTOR_IND_HEIGHT*3 - BUTT_Y_MARGIN), 175, BUTT_HEIGHT ), charPtr, 0  );
+    // calibrateButt0 = Button (  Box ( Vector2 (BUTT_X_POS, -MOTOR_IND_Y_POS - MOTOR_IND_MARGIN*3 - MOTOR_IND_HEIGHT*3 - BUTT_Y_MARGIN), 175, BUTT_HEIGHT ), charPtr, 0  );
+    calibrateButt0 = Button (  Box ( Vector2 (BUTT_X_POS, -MOTOR_IND_Y_POS - MOTOR_IND_MARGIN*3 - MOTOR_IND_HEIGHT*3 - BUTT_Y_MARGIN), 83, BUTT_HEIGHT ), charPtr, 0  );
     
+    strcpy (charPtr, "DDR"); // use charPtr to set the text of the button
+    calibrateButt1 = Button (  Box ( Vector2 (BUTT_X_POS + 92, -MOTOR_IND_Y_POS - MOTOR_IND_MARGIN*3 - MOTOR_IND_HEIGHT*3 - BUTT_Y_MARGIN), 83, BUTT_HEIGHT ), charPtr, 0  );
+
     // initialize the course object
     course = Course (Vector2 (200, -15), 0.3); // course = Course (Vector2 (150, -32), .25);
     
@@ -3784,6 +3980,8 @@ void Init () {
     // do stuff to fix the vehicles rotation to make it better match the orientation of the real robot
     vehicle.AddRotation (255); // 180-45+120
     
+    // vehicle.SetPosition (Vector2 (9,-63));
+    
     if (IS_SIMULATION) {
         // create a vehicle object that shows where the vehicle would by according to simulated values; this should exist in the Xcode simulation
         bool isSubSimulation = false;
@@ -3819,12 +4017,14 @@ void Init () {
     
     // rps.Calibrate (coordinateAtDDR, coordinateAtToken);
     
-    Vector2 realWorldPoint = Vector2 (5, 5);
+    Vector2 realWorldPoint = Vector2 (8.800, 11.300); // (8.800, 11.300);
     
     if (IS_SIMULATION) {
-        realWorldPoint = Vector2 (31.543, 10.629); // 24.343, 12.343
+        // realWorldPoint = Vector2 (31.543, 10.629); // 24.343, 12.343
+        realWorldPoint = Vector2 (9.0, 9.0);
+        navigator.SetDDRCoordinate(Vector2 (24.343, 12.343));
     } else {
-        realWorldPoint = getCourseCalibration ();
+        // realWorldPoint = getCourseCalibration ();
     }
     
     rps.Calibrate (realWorldPoint);
@@ -3833,7 +4033,7 @@ void Init () {
     physics = PhysicsRPS (&rps, &subSimulationVehicle, &vehicle);
     
     // initialize the navigation procedure for the state machine (important that this happens after the vehicle vectors are aligned)
-    navigator.Initialize ();
+    // navigator.Initialize ();
     
     timeSinceLastFrameUpdate = TimeNow (); // initialize the time since the last screen/frame update
 }
@@ -3890,16 +4090,16 @@ void DrawEverything () {
     if (true || navigator.IsSimulationRunning ()) { // SUB_SIMULATION_ENABLED
         LCD.SetFontColor (subSimulationVehicle.color);
         course.DrawRealVehicle (subSimulationVehicle);
-        LCD.SetFontColor (RED);
-        course.DrawVehicleVectors (subSimulationVehicle);
+        // LCD.SetFontColor (BLUE);
+        // course.DrawVehicleVectors (subSimulationVehicle);
     }
     
-    /*
+
     LCD.SetFontColor (WHITE);
     LCD.Write (RPS.X ());
     LCD.Write (", ");
     LCD.WriteLine (RPS.Y ());
-    */
+
     
     /*
      LCD.WriteLine (vehicle.cds.Value ());
@@ -3999,7 +4199,8 @@ void DrawEverything () {
     cancelButt.DrawButton();
     actionButt0.DrawButton();
     actionButt1.DrawButton();
-    calibrateButt.DrawButton();
+    calibrateButt0.DrawButton();
+    calibrateButt1.DrawButton();
 }
 
 
@@ -4036,8 +4237,12 @@ void mainLoop () {
     if (butt.IsBeingPressed (touch)) { // checks if the button was pressed and updates the state of the button
         navigator.Start (); // manually starts the navigation procedure
     }
-    if (calibrateButt.IsBeingPressed (touch)) { // checks if the button was pressed and updates the state of the button
+    if (calibrateButt0.IsBeingPressed (touch)) { // checks if the button was pressed and updates the state of the button
         rps.Calibrate (   Vector2 (RPS.X (), RPS.Y ())   );
+    }
+    if (calibrateButt1.IsBeingPressed (touch)) { // checks if the button was pressed and updates the state of the button
+        // rps.Calibrate (   Vector2 (RPS.X (), RPS.Y ())   );
+        navigator.SetDDRCoordinate (   Vector2 (RPS.X (), RPS.Y ())   );
     }
     
     // vehicle.pos = Vector2 (RPS.X (), RPS.Y () - 6.0 * 12);

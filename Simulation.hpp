@@ -1,8 +1,9 @@
 #define IS_SIMULATION 1
 #define SUB_SIMULATION_ENABLED 1
 
-#define LIMIT_SIMULATION 0
-#define SIMULATED_BUMPS_ENABLED 1 && !LIMIT_SIMULATION
+#define FULL_SIMULATION_ENABLED 1  &&  SUB_SIMULATION_ENABLED
+#define SIMULATED_COLLISION_ENABLED 1   &&   FULL_SIMULATION_ENABLED
+#define SIMULATED_BUMPS_ENABLED 1  &&  FULL_SIMULATION_ENABLED //  &&  SIMULATED_COLLISION_ENABLED
 /*
 
 
@@ -131,6 +132,7 @@ private:
 
 /************************ PHYSICS CLASSES ************************/
 
+#if SIMULATED_COLLISION_ENABLED
 // class that contains a bunch off arrays of pointers to different shape objects; used to specify which objects a physics object can collide with
 class LayerMask {
 public:
@@ -228,6 +230,68 @@ public:
     }
 private:
 };
+#else
+
+
+
+
+
+
+class LayerMask {
+public:
+    LayerMask (LayerMask *tempLM) {
+
+    }
+    LayerMask () {
+
+    }
+    /*
+    static const int MAX_EDGES = 8;
+    static const int MAX_BOXES = 8;
+    static const int MAX_INVERTED_BOXES = 1;
+    static const int MAX_POLYGONS = 8;
+    int edgeCount;
+    int boxCount;
+    int invertedBoxCount;
+    int polygonCount;
+    Edge edges [MAX_EDGES];
+    Box boxes [MAX_BOXES];
+    Box invertedBoxes [MAX_INVERTED_BOXES];
+    Polygon polygons [MAX_POLYGONS];
+    */
+    /*
+    // sets the edge shape objects to be included in the layer mask
+    void SetEdges (Edge tempEdges [MAX_EDGES], int tempEdgeCount) {
+
+    }
+    // sets the box shape objects to be included in the layer mask
+    void SetBoxes (Box tempBoxes [MAX_BOXES], int tempBoxCount) {
+
+    }
+    // sets the inverted box shape objects to be included in the layer mask
+    void SetInvertedBoxes (Box tempBoxes [MAX_INVERTED_BOXES], int tempBoxCount) {
+
+    }
+    // sets the edge shape objects to be included in the layer mask
+    void SetPolygons (Polygon tempObjs [MAX_POLYGONS], int tempCount) {
+        
+    }
+    // converts the given layer mask to a layer mask containing only polygons
+    const static LayerMask ConvertToPolygonMask (LayerMask LM) {
+        LayerMask polyMask = LayerMask ();
+        
+        return polyMask;
+    }
+    */
+private:
+};
+
+
+
+
+
+
+#endif
 #if !SIMULATED_BUMPS_ENABLED
 
 
@@ -492,7 +556,7 @@ private:
 
 
 
-
+#if SIMULATED_COLLISION_ENABLED
 // // physics system with one dynamic physics object and several static objects
 // in retrospect, I should have set this up more like how the raycast object is
 class PhysicsCalculator {
@@ -702,6 +766,67 @@ private:
         return collided; // ope this method would also need to return the collision point and edge to be useful
     }
 };
+#else
+
+
+
+
+
+
+class PhysicsCalculator {
+public:
+    PhysicsCalculator (LayerMask tempLM, PhysicsObject tempPhysObj) {
+
+    }
+    PhysicsCalculator () {
+        
+    }
+    LayerMask LM;
+    PhysicsObject physObj;
+    Vector2 force;
+    float torque;
+    
+    void UpdatePhysicsObjectVars (Polygon tempShape, Vector2 tempPos, Vector2 tempVel, float tempAngVel) {
+
+    }
+    void CalculateCollisions () {
+
+    }
+private:
+    // create constants
+    float EDGE_TOL; // edge tolerance
+    // simulates collision between a this.physObj and the given static polygon
+    // updates this.force and this.torque to be the force and torque applied to the physics due to the collision
+    // returns whether there was a collision
+    bool CollideWithPolygon (Polygon poly) {
+        bool collided = false;
+        return collided;
+    }
+    
+    // updates this.force and this.torque
+    void CalculateForces (Vector2 point, Edge edge, bool isFlipped) {
+
+    }
+    
+    // checks if the given point has collided with the given edge
+    bool CheckCollision (Vector2 point, Edge edge) {
+        bool collided = false;
+        return collided; // collided true
+    }
+    
+    // check for collision between the points of the first polygon and the edges of the second polygon
+    bool CheckCollisionBetweenPolygonEdgesAndPoints (Polygon pointPoly, Polygon edgePoly) {
+        bool collided = false;
+        return collided;
+    }
+};
+
+
+
+
+
+
+#endif
 
 
 
@@ -730,6 +855,7 @@ public:
     
     // set up all of the physics stuff
     void SetUpPhysics () {
+#if SIMULATED_COLLISION_ENABLED
         // set up layer masks (for bump switches)
         
         courseObjects = CourseObjects ();
@@ -767,6 +893,7 @@ public:
         float physObjMass = 1.0;
         PhysicsObject physObj = PhysicsObject (veh->chassis, veh->pos, veh->vel, veh->angVel, physObjMass);
         physics = PhysicsCalculator (physicsLM, physObj);
+#endif
     }
     void Update () {
         float deltaTime = TimeNow () - timeSinceUpdate; // the elapsed amount of time in sseconds
@@ -804,7 +931,7 @@ public:
         // for (int k = 0; k < 999999; k++); // purposely slow down the simulation to see how it is affected; it does affect it, which is neat and unfortunate
         // timeSinceUpdate = TimeNow ();
         
-        if (collisionEnabled) {
+        if (SIMULATED_COLLISION_ENABLED && collisionEnabled) {
             physics.UpdatePhysicsObjectVars (veh->chassis, veh->pos, veh->vel, veh->angVel);
             physics.CalculateCollisions ();
             Vector2 collisionForce = physics.force;
