@@ -1,4 +1,9 @@
-#define IS_SIMULATION 0
+#define IS_SIMULATION 1
+#define SUB_SIMULATION_ENABLED 1
+
+#define FULL_SIMULATION_ENABLED 1  &&  SUB_SIMULATION_ENABLED
+#define SIMULATED_COLLISION_ENABLED 1   &&   FULL_SIMULATION_ENABLED
+#define SIMULATED_BUMPS_ENABLED 1  &&  FULL_SIMULATION_ENABLED //  &&  SIMULATED_COLLISION_ENABLED
 /*
 
 
@@ -28,7 +33,7 @@ extern Vehicle simulatedVehicle; // this declaration enables the use of the simu
 
 
 
-#if !IS_SIMULATION // if this is not the simulation, then this chunck of code is used. Otherwise, this code is ignored.
+#if !IS_SIMULATION  &&  !SUB_SIMULATION_ENABLED // if this is not the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
 
 
@@ -46,6 +51,9 @@ extern Vehicle simulatedVehicle; // this declaration enables the use of the simu
 
 class Simulation {
 public:
+    Simulation (Vehicle *vehicle, bool isSubSimulation) {
+        veh = vehicle;
+    }
     Simulation (Vehicle *vehicle) {
         veh = vehicle;
     }
@@ -66,7 +74,7 @@ private:
 
 
 #endif
-#if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
+#if IS_SIMULATION // &&  SUB_SIMULATION_ENABLED // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
 
 
@@ -82,13 +90,36 @@ private:
 
 
 
+#include <stdio.h>
+// #include "GFWMotor.hpp"
+
+
+
+
+
+
+
+#endif
+#if SUB_SIMULATION_ENABLED // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
+/*
+ 
+ 
+ 
+ SIMULATION ENABLED only stuff
+ 
+ 
+ 
+ */
+
+
+
+
+
+
 // include statements
 
 #ifndef Simulation_hpp
 #define Simulation_hpp
-#include <stdio.h>
-
-// #include "GFWMotor.hpp"
 
 
 /************************************************************************ GLOBAL SIMULATION VARIABLE DECLERATIONS ************************************************************************/
@@ -101,6 +132,7 @@ private:
 
 /************************ PHYSICS CLASSES ************************/
 
+#if SIMULATED_COLLISION_ENABLED
 // class that contains a bunch off arrays of pointers to different shape objects; used to specify which objects a physics object can collide with
 class LayerMask {
 public:
@@ -116,10 +148,10 @@ public:
         invertedBoxCount = 0;
         polygonCount = 0;
     }
-    static const int MAX_EDGES = 64;
-    static const int MAX_BOXES = 64;
+    static const int MAX_EDGES = 8;
+    static const int MAX_BOXES = 8;
     static const int MAX_INVERTED_BOXES = 1;
-    static const int MAX_POLYGONS = 64;
+    static const int MAX_POLYGONS = 8;
     int edgeCount;
     int boxCount;
     int invertedBoxCount;
@@ -198,8 +230,95 @@ public:
     }
 private:
 };
+#else
 
 
+
+
+
+
+class LayerMask {
+public:
+    LayerMask (LayerMask *tempLM) {
+
+    }
+    LayerMask () {
+
+    }
+    /*
+    static const int MAX_EDGES = 8;
+    static const int MAX_BOXES = 8;
+    static const int MAX_INVERTED_BOXES = 1;
+    static const int MAX_POLYGONS = 8;
+    int edgeCount;
+    int boxCount;
+    int invertedBoxCount;
+    int polygonCount;
+    Edge edges [MAX_EDGES];
+    Box boxes [MAX_BOXES];
+    Box invertedBoxes [MAX_INVERTED_BOXES];
+    Polygon polygons [MAX_POLYGONS];
+    */
+    /*
+    // sets the edge shape objects to be included in the layer mask
+    void SetEdges (Edge tempEdges [MAX_EDGES], int tempEdgeCount) {
+
+    }
+    // sets the box shape objects to be included in the layer mask
+    void SetBoxes (Box tempBoxes [MAX_BOXES], int tempBoxCount) {
+
+    }
+    // sets the inverted box shape objects to be included in the layer mask
+    void SetInvertedBoxes (Box tempBoxes [MAX_INVERTED_BOXES], int tempBoxCount) {
+
+    }
+    // sets the edge shape objects to be included in the layer mask
+    void SetPolygons (Polygon tempObjs [MAX_POLYGONS], int tempCount) {
+        
+    }
+    // converts the given layer mask to a layer mask containing only polygons
+    const static LayerMask ConvertToPolygonMask (LayerMask LM) {
+        LayerMask polyMask = LayerMask ();
+        
+        return polyMask;
+    }
+    */
+private:
+};
+
+
+
+
+
+
+#endif
+#if !SIMULATED_BUMPS_ENABLED
+
+
+
+
+
+
+
+class Raycast {
+public:
+    Raycast (LayerMask tempLM, Vector2 origin, Vector2 direction, float maxDistance, char type) {
+        
+    }
+    Raycast () {
+        
+    }
+private:
+};
+
+
+
+
+
+
+
+#endif
+#if SIMULATED_BUMPS_ENABLED
 class Raycast {
 public:
     // Raycast (Vector2 origin, Vector2 direction, float maxDistance = 99999, char type = 'X');
@@ -339,30 +458,8 @@ private:
                 // normal = Vector2 (boxEdges [k].norm.x, boxEdges [k].norm.y);
             }
         }
-        
-        /*
-         bool sCol = CheckEdgeCollision (southEdge);
-         bool wCol = CheckEdgeCollision (westEdge);
-         bool nCol = CheckEdgeCollision (northEdge);
-         bool eCol = CheckEdgeCollision (eastEdge);
-         
-         if (nCol) {
-         int n = 0;
-         }
-         if (sCol) {
-         int n = 0;
-         }
-         */
-        
+
         return collided;
-        
-        /*
-         if (CheckEdgeCollision (southEdge) || CheckEdgeCollision (westEdge) || CheckEdgeCollision (northEdge) || CheckEdgeCollision (eastEdge)) {
-         return true;
-         } else {
-         return false;
-         }
-         */
     }
     bool CheckEdgeCollision (Edge edge) {
         Vector2 point = pos;
@@ -418,6 +515,7 @@ private:
         return sqrt (  pow (end.x - start.x, 2.0)  +  pow (end.y - start.y, 2.0)  );
     }
 };
+#endif
 
 
 /************************************************************************ SIMULATION CODE ************************************************************************/
@@ -457,11 +555,15 @@ private:
 };
 
 
+
+#if SIMULATED_COLLISION_ENABLED
 // // physics system with one dynamic physics object and several static objects
 // in retrospect, I should have set this up more like how the raycast object is
 class PhysicsCalculator {
 public:
     PhysicsCalculator (LayerMask tempLM, PhysicsObject tempPhysObj) {
+        EDGE_TOL = 2.0;
+        
         LM = tempLM; // LM should only contain polygons
         physObj = tempPhysObj;
         // statCount = 0;
@@ -516,7 +618,7 @@ public:
     }
 private:
     // create constants
-    constexpr static float EDGE_TOL = 2.0; // edge tolerance
+    float EDGE_TOL; // edge tolerance
     // simulates collision between a this.physObj and the given static polygon
     // updates this.force and this.torque to be the force and torque applied to the physics due to the collision
     // returns whether there was a collision
@@ -664,25 +766,96 @@ private:
         return collided; // ope this method would also need to return the collision point and edge to be useful
     }
 };
+#else
+
+
+
+
+
+
+class PhysicsCalculator {
+public:
+    PhysicsCalculator (LayerMask tempLM, PhysicsObject tempPhysObj) {
+
+    }
+    PhysicsCalculator () {
+        
+    }
+    LayerMask LM;
+    PhysicsObject physObj;
+    Vector2 force;
+    float torque;
+    
+    void UpdatePhysicsObjectVars (Polygon tempShape, Vector2 tempPos, Vector2 tempVel, float tempAngVel) {
+
+    }
+    void CalculateCollisions () {
+
+    }
+private:
+    // create constants
+    float EDGE_TOL; // edge tolerance
+    // simulates collision between a this.physObj and the given static polygon
+    // updates this.force and this.torque to be the force and torque applied to the physics due to the collision
+    // returns whether there was a collision
+    bool CollideWithPolygon (Polygon poly) {
+        bool collided = false;
+        return collided;
+    }
+    
+    // updates this.force and this.torque
+    void CalculateForces (Vector2 point, Edge edge, bool isFlipped) {
+
+    }
+    
+    // checks if the given point has collided with the given edge
+    bool CheckCollision (Vector2 point, Edge edge) {
+        bool collided = false;
+        return collided; // collided true
+    }
+    
+    // check for collision between the points of the first polygon and the edges of the second polygon
+    bool CheckCollisionBetweenPolygonEdgesAndPoints (Polygon pointPoly, Polygon edgePoly) {
+        bool collided = false;
+        return collided;
+    }
+};
+
+
+
+
+
+
+#endif
+
+
 
 
 class Simulation {
 public:
-    Simulation (Vehicle *vehicle) {
+    Simulation (Vehicle *vehicle, bool tempIsSubSimulation) {
         veh = vehicle;
         
+        // setup and initialize setting variables
+        SetupSettings ();
         // setup layermasks for raycasts and physics stuff
         SetUpPhysics ();
         
-        timeSinceUpdate = TimeNow ();
+        // collisionEnabled = false;
+        // bumpsEnabled = false;
+        isSubSimulation = tempIsSubSimulation;
+        
+        // timeSinceUpdate = TimeNow ();
+        timeSinceUpdate = 0;
     }
     Simulation () {
-
+        
     }
     Vehicle *veh;
     
     // set up all of the physics stuff
     void SetUpPhysics () {
+#if SIMULATED_COLLISION_ENABLED
         // set up layer masks (for bump switches)
         
         courseObjects = CourseObjects ();
@@ -706,8 +879,11 @@ public:
         }
         
         // edgeCount = 0; // temporary
-        
+#if SIMULATED_BUMPS_ENABLED
         bumpLM = LayerMask ();
+#else
+        LayerMask bumpLM = LayerMask ();
+#endif
         bumpLM.SetEdges (edges, edgeCount);
         bumpLM.SetBoxes (boxes, boxCount);
         bumpLM.SetInvertedBoxes (invertedBoxes, invertedBoxCount);
@@ -717,14 +893,9 @@ public:
         float physObjMass = 1.0;
         PhysicsObject physObj = PhysicsObject (veh->chassis, veh->pos, veh->vel, veh->angVel, physObjMass);
         physics = PhysicsCalculator (physicsLM, physObj);
+#endif
     }
     void Update () {
-        /*
-        // get bump switch value
-        for (int k = 0; k < veh->bumpsLength; k++) {
-            veh->bumps [k].SetValue (SimulateBumpValue (&veh->bumps [k]));
-        }
-        */
         float deltaTime = TimeNow () - timeSinceUpdate; // the elapsed amount of time in sseconds
         timeSinceUpdate = TimeNow ();
 
@@ -756,30 +927,31 @@ public:
         float gain = 1.0;
         AccelerateTo (netVelocity, gain);
         AngularAccelerateTo (netAngularVelocity, gain);
-
-        /*
-        veh->UpdatePosition ();
-        veh->UpdateRotation ();
-        */
     
         // for (int k = 0; k < 999999; k++); // purposely slow down the simulation to see how it is affected; it does affect it, which is neat and unfortunate
         // timeSinceUpdate = TimeNow ();
         
-        physics.UpdatePhysicsObjectVars (veh->chassis, veh->pos, veh->vel, veh->angVel);
-        physics.CalculateCollisions ();
-        Vector2 collisionForce = physics.force;
-        float collisionTorque = physics.torque;
-        veh->ApplyAcceleration (collisionForce);
-        veh->ApplyAngularAcceleration (collisionTorque);
+        if (SIMULATED_COLLISION_ENABLED && collisionEnabled) {
+            physics.UpdatePhysicsObjectVars (veh->chassis, veh->pos, veh->vel, veh->angVel);
+            physics.CalculateCollisions ();
+            Vector2 collisionForce = physics.force;
+            float collisionTorque = physics.torque;
+            veh->ApplyAcceleration (collisionForce);
+            veh->ApplyAngularAcceleration (collisionTorque);
+        }
         
-        // get bump switch value
-        for (int k = 0; k < veh->bumpsLength; k++) {
-            veh->bumps [k].SetValue (SimulateBumpValue (&veh->bumps [k]));
+        if (SIMULATED_BUMPS_ENABLED && bumpsEnabled) {
+            // get bump switch value
+            for (int k = 0; k < veh->bumpsLength; k++) {
+                veh->bumps [k].SetValue (SimulateBumpValue (&veh->bumps [k]));
+            }
         }
         
         veh->UpdatePosition ();
         veh->UpdateRotation ();
     }
+    
+#if SIMULATED_BUMPS_ENABLED
     bool SimulateBumpValue (BumpSwitch *bump) {
         // perform ray casts
         Vector2 origin = Vector2 (veh->pos.x + bump->pos.x, veh->pos.y + bump->pos.y); // 72 is course height
@@ -793,29 +965,21 @@ public:
         
         // apply velocity to vehicle using normal vector if hit
         if (raycast.hit) {
-            /*
-            float MAGIC_ANG_ACCEL_NUMBER = 2.66; // 1.66
-            float RESTI = 2.0; // (kind of) coefficient of restitution // 2.0
-            Vector2 force = Vector2 (raycast.normal.x * abs (veh->vel.x) * RESTI, raycast.normal.y * abs (veh->vel.y) * RESTI);
-            veh->ApplyAcceleration (force);
-            
-            // Vector2 angForce = Vector2 (raycast.normal.x * abs (veh->vel.x) * RESTI, raycast.normal.y * abs (veh->vel.y) * RESTI);
-            Vector2 angForce = Vector2 (raycast.normal.x * 0.1 * RESTI, raycast.normal.y * 0.1 * RESTI); // hmmm
-            // Vector2 angForce = Vector2 (raycast.normal.x * veh->vel.x * RESTI, raycast.normal.y * veh->vel.y * RESTI);
-            // Vector2 angForce = Vector2 (veh->vel.x * RESTI, veh->vel.y * RESTI);
-            // angForce = Vector2 (angForce.y, -angForce.x);
-            Vector2 radialPosition = Vector2 (raycast.point.x - veh->pos.x, raycast.point.y - veh->pos.y);
-            float torque = radialPosition.CalculateCrossProduct (angForce);
-            veh->ApplyAngularAcceleration (torque * MAGIC_ANG_ACCEL_NUMBER);
-            
-            cout << "Raycast normal = " << raycast.normal.x << ", " << raycast.normal.y << endl;
-            */
+
         }
-        // return raycast value
         
+        // return raycast value
         return !(raycast.hit);
-        // return ((int)(bump.pos.x)) % 2;
     }
+#else
+    bool SimulateBumpValue (BumpSwitch *bump) {
+        return false;
+    }
+#endif
+    
+    
+    /************************ MISC FUNCTIONS ************************/
+    
     void AccelerateTo (Vector2 targetVelocity, float gain) {
         Vector2 accel = Vector2 (targetVelocity.x - veh->vel.x, targetVelocity.y - veh->vel.y);
         veh->ApplyAcceleration (accel);
@@ -845,17 +1009,49 @@ public:
         }
         return result;
     }
+    
+    /*********************** SETTINGS FUNCTIONS *************************/
+    
+    // initialize setting variables
+    void SetupSettings () {
+        collisionEnabled = true;
+        bumpsEnabled = true;
+    }
+    // set whether the simulated vehicle should collide or not
+    void SetCollision (bool isEnabled) {
+        collisionEnabled = isEnabled;
+    }
+    // set whether the simulated vehicle should have simulated bumpswitches
+    void SetSimulatedBumps (bool isEnabled) {
+        bumpsEnabled = isEnabled;
+    }
+    
+    
+    // misc variables
+    
     float timeSinceUpdate; // the time passed since the simulated vehicle was updated
+    
     
     // physics variables
     
     CourseObjects courseObjects;
+#if SIMULATED_BUMPS_ENABLED
     LayerMask bumpLM; // the layer mask for the bump switches
+#endif
     LayerMask physicsLM; // the layer mask for physics collisions
     PhysicsCalculator physics;
+    
+    
+    // setting variables
+    
+    bool collisionEnabled;
+    bool bumpsEnabled;
+    bool isSubSimulation;
 
+    
     // constant variables initialization
 
+#if IS_SIMULATION
     constexpr static float A_GRAVITY = 9.81;
     constexpr static float SQRT_3 = 1.73205080757;
     constexpr static float RADS_TO_DEGREES = M_PI / 180.0;
@@ -866,6 +1062,21 @@ public:
     constexpr static float MAX_VELOCITY = VELOCITY_AT_50_POWER * 2.0; // in inches per second
     constexpr static float ANGULAR_VELOCITY_AT_50_POWER = 135.0; // in degrees per second
     constexpr static float MAX_ANGULAR_VELOCITY = ANGULAR_VELOCITY_AT_50_POWER * 2.0; // in degrees per second
+#else
+    const static float A_GRAVITY = 9.81;
+    const static float SQRT_3 = 1.73205080757;
+    const static float RADS_TO_DEGREES = M_PI / 180.0;
+    const static float METERS_TO_INCHES = 39.3701;
+    // const static float INCHES_TO_METERS = 1.0 / METERS_TO_INCHES;
+    const static float INCHES_TO_METERS = 1.0 / 39.3701;
+
+    const static float VELOCITY_AT_50_POWER = 8.9; // in inches per second
+    // const static float MAX_VELOCITY = VELOCITY_AT_50_POWER * 2.0; // in inches per second
+    const static float MAX_VELOCITY = 8.9 * 2.0; // in inches per second
+    const static float ANGULAR_VELOCITY_AT_50_POWER = 135.0; // in degrees per second
+    // const static float MAX_ANGULAR_VELOCITY = ANGULAR_VELOCITY_AT_50_POWER * 2.0; // in degrees per second
+    const static float MAX_ANGULAR_VELOCITY = 135.0 * 2.0; // in degrees per second
+#endif
 private:
 };
 

@@ -200,7 +200,7 @@ private:
         if (TimeNow () - timeWhenTimerStarted > REFRESH_RATE) {
             timeWhenTimerStarted = TimeNow ();
             
-            value = 1.0;
+            value = 1.5;
             value += (rand () % VARIANCE / 1000.0 - (VARIANCE / 2000.0));
         }
     }

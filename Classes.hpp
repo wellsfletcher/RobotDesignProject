@@ -1,4 +1,4 @@
-#define IS_SIMULATION 0
+#define IS_SIMULATION 1
 #if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
 
@@ -156,16 +156,61 @@ public:
     float getAngle () {
         float angle = -atan (x / y) / DEGREES_TO_RADS;
         if (y <= 0) {
-            angle = angle + 180;
+            angle = angle + 180; // this little bits is what has been messing everything up
         }
         // cout << "Angle: " << angle << endl;
         return angle;
     }
+    // gets angle formed by the vector
+    float getBetterAngle () {
+        float angle = -atan (x / y) / DEGREES_TO_RADS;
+        // cout << "Angle: " << angle << endl;
+        return angle;
+    }
+    float getEvenBetterAngle () {
+        // x-axis = Vector2 (1.0, 0.0)
+        
+        float dot = x * 1.0 + y * 0.0;
+        float determinant = x * 0.0 - y * 1.0;
+        float angle = -atan2 (determinant, dot) / DEGREES_TO_RADS + 90;
+        
+        return angle;
+    }
+    /*
+    // gets angle formed by the vector
+    float getBetterAngle () {
+        float hypo = getMagnitude ();
+        float angle = -acos (x / hypo) / DEGREES_TO_RADS;
+
+        angle = BetterCapDegrees (angle);
+        // cout << "Angle: " << angle << endl;
+        return angle;
+    }
+     */
+    float getNotMessedUpVehicleDirAngle () {
+        // float angle = getAngle ();
+        
+        float relativeDegrees = getBetterAngle () + 30 - 60; // - startAngle (60)
+        relativeDegrees = Vector2::CapDegrees (relativeDegrees);
+        
+        return relativeDegrees;
+    }
     // gets angle formed by the vector, but ensures that the returned angle is between 0 and 360
     float getCappedAngle () {
         float cappedAngle = getAngle ();
-        CapDegrees (cappedAngle);
+        CapDegrees (cappedAngle); // hmmm...
         return cappedAngle;
+    }
+    // returns the degrees capped at 360 and 0
+    const static float BetterCapDegrees (float degrees) {
+        while (degrees >= 360) {
+            degrees -= 360;
+        }
+        
+        while (degrees < 0) {
+            degrees += 360;
+        }
+        return degrees;
     }
     // returns the degrees capped at 360 and 0
     const static float CapDegrees (float degrees) {
@@ -176,9 +221,23 @@ public:
         }
         return degrees;
     }
+    // gets distance in degree between two angles (that are each between 0 and 360)
+    static float getDegreeDistance (float angle1, float angle2) {
+        float deltaDegrees = angle2 - angle1;
+        // deltaDegrees *= -1;
+        
+        float deltaDegreesMinus360 = deltaDegrees - 360;
+        
+        if (abs (deltaDegrees) > abs (deltaDegreesMinus360)) {
+            deltaDegrees = deltaDegreesMinus360;
+        }
+        
+        return abs (deltaDegrees);
+    }
     // returns a vector equivalent for the given angle
     static Vector2 DegreesToVector2 (float degrees) {
-        Vector2 dir = Vector2 (1, tan (degrees * DEGREES_TO_RADS));
+        float yValue = tan (degrees * DEGREES_TO_RADS);
+        Vector2 dir = Vector2 (1, yValue);
         return dir;
     }
     // gets Cross Product between this and other (this x other)
@@ -1069,12 +1128,24 @@ public:
     
     // graphics
     int color;
-    bool isSimulated; // whether the vehicle is a simulated vehicle or not
+    int isSimulated; // whether the vehicle is a simulated vehicle or not
 
 
     /*********************** general functions *************************/
 
-    // ...
+    // copies bump and motor values from inputVeh into this
+    void CopyHardwareValues (Vehicle *inputVeh) {
+        // copy the wheels array values
+        for (int k = 0; k < wheelsLength; k++) {
+            wheels [k].activePercent = inputVeh->wheels [k].activePercent / 100.0;
+        }
+        /*
+        // copy the bumps array values
+        for (int k = 0; k < bumpsLength; k++) {
+            bumps [k].value = inputVeh->bumps [k].value;
+        }
+        */
+    }
 
 
     /*********************** navigation / movement functions *************************/
