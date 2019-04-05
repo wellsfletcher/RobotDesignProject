@@ -1,4 +1,4 @@
-#define IS_SIMULATION 1 // also have to define this variable in Simulation.hpp and Classes.hpp
+#define IS_SIMULATION 0 // also have to define this variable in Simulation.hpp and Classes.hpp
 #define SUB_SIMULATION_ENABLED 1
 // #define FULL_SIMULATION 1
 #if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
@@ -1589,6 +1589,8 @@ public:
         // initialize constants
         
         STOP_DURATION = 0.5;
+        XTRA_SHORT_STOP_DURATION = 0.1;
+        SPEEDY_FACTOR = 1.3333333; // 1.0
         
         
         // initialize global variables
@@ -1676,6 +1678,8 @@ public:
     // declare constants
     
     float STOP_DURATION; // variable for controlling the stop interval often used in navigation procedures
+    float XTRA_SHORT_STOP_DURATION;
+    float SPEEDY_FACTOR;
     
     
     // declare physics variables
@@ -2883,7 +2887,7 @@ public:
                 getOutOfDeadzoneDirection.Rotate (-90);
                 
                 float GOODPower = 60;
-                float GOODMaxDistance = 50;
+                float GOODMaxDistance = 45;
                 
                 bool isOutOfDeadzone = PerformLocalAbortion (getOutOfDeadzoneDirection, GOODPower, GOODMaxDistance);
                 
@@ -2897,7 +2901,7 @@ public:
             case 2: {
                 // move to top of ramp
                 // StateVFF    * get_centered_on_ramp = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (29, 20.0), 50,  0.0); // coordinate, power, distanceError // 30, 20.0
-                bool isCenteredOnRamp = MoveToCoordinate (Vector2 (29, 20.0), 50, 0.0);
+                bool isCenteredOnRamp = MoveToCoordinate (Vector2 (30, 52), 50, 0.0);
                 
                 if (isCenteredOnRamp) {
                     substate++;
@@ -2921,7 +2925,7 @@ public:
             case 4: {
                 // move until bump
                 
-                veh->Move (Vector.F, power);
+                veh->Move (Vector.F, 50);
                 float maxDuration = 5.0;
                 result = !veh->bumps [F0].Value() || (TimeNow() - SM.timeWhenStateChanged > maxDuration);
                 
@@ -3184,7 +3188,7 @@ public:
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
         StateF      * short_stop = new StateF (this, & Navigator :: StopVehicle, 0.1); // stopTime
         StateFF     * calibration_rotation = new StateFF (this, & Navigator :: CalibrateRotation, 50, 2.0); // 35, 3.0
-        StateFFI    * global_align_to_DDR = new StateFFI (this, & Navigator :: PreciseRotateToGlobalAngle, -180, 50, 1); // 179 // (hyp. works) 179+45
+        StateFFI    * global_align_to_DDR = new StateFFI (this, & Navigator :: PreciseRotateToGlobalAngle, -180, 50 * SPEEDY_FACTOR, 1); // 179 // (hyp. works) 179+45
         // StateVFF    * initial_move = new StateVFF (this, & Navigator :: MoveDuration, Vector.F, 35, 0.8); // direction, power, duration // StateVFF
         //- StateVFF    * initial_move = new StateVFF (this, & Navigator :: CalibrateDistance, Vector.F, 50, 1.7); // direction, power, duration // 0.8 // 2.0
         // StateVFF    * initial_move = new StateVFF (this, & Navigator :: CalibrateDistance, Vector.FA, 75, 1.7); // direction, power, duration // 0.8 // 2.0
@@ -3194,8 +3198,8 @@ public:
         // robot at DDR = 23.599, 15.000; was 22.5, 14.5
         // Vector2 DDRSpot = Vector2 (23.600 - 0.5, 15.000);
         Vector2 DDRSpot = DDRCoordinate;
-        StateVFI    * move_to_DDR_light = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, DDRSpot, 50, 1); // coordinate, power, distanceError // 24, 15 // 22, 15 // 23.5, 14.5 // 23.600 - 0.5
-        StateVFI    * move_to_DDR_light_2 = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, DDRSpot, 25, 2); // coordinate, power, distanceError // 24, 15 // 22, 15 // 23.5, 14.5 // 23.600 - 0.5
+        StateVFI    * move_to_DDR_light = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, DDRSpot, 50 * SPEEDY_FACTOR, 1); // coordinate, power, distanceError // 24, 15 // 22, 15 // 23.5, 14.5 // 23.600 - 0.5
+        StateVFI    * move_to_DDR_light_2 = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, DDRSpot, 25 * SPEEDY_FACTOR, 2); // coordinate, power, distanceError // 24, 15 // 22, 15 // 23.5, 14.5 // 23.600 - 0.5
 
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
@@ -3231,7 +3235,7 @@ public:
         StateF      * short_stop = new StateF (this, & Navigator :: StopVehicle, 0.25); // stopTime
         
         Vector2 DDRSpot = DDRCoordinate;
-        StateVFF    * gather_up_min_lightValue = new StateVFF (this, & Navigator :: MoveToGetMinLightValue, Vector.DE, 35, 0.1); // direction, power, duration // MoveToGetMinLightValue
+        StateVFF    * gather_up_min_lightValue = new StateVFF (this, & Navigator :: MoveToGetMinLightValue, Vector.DE, 35 * SPEEDY_FACTOR, 0.1); // direction, power, duration // MoveToGetMinLightValue
         StateVFI    * move_to_DDR_light_if_invalid_reading = new StateVFI (this, & Navigator :: MoveToCoordinateIfNoLightReading, DDRSpot, 25, 2); // coordinate, power, distanceError // 24, 15 // 22, 15 // 23.5, 14.5 // 23.600 - 0.5
         StateVFF    * retry_gathering_up_min_lightValue = new StateVFF (this, & Navigator :: MoveToGetMinLightValueIfInvalidReading, Vector.DE, 35, 0.1); // direction, power, duration // MoveToGetMinLightValue
         
@@ -3273,21 +3277,23 @@ public:
         // *********** INITIALIZE state objects *********** //
         
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
-        StateVFF    * get_centered_on_ramp = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (29, 20.0), 50,  0.0); // coordinate, power, distanceError // 30, 20.0
+        StateVFF    * get_centered_on_ramp = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (29, 20.0), 50 * SPEEDY_FACTOR,  0.0); // coordinate, power, distanceError // 30, 20.0
         // StateVFFF   * global_move_to_get_down_ramp = new StateVFFF (this, & Navigator :: GlobalMoveUntilBelowY, Vector.down, 65, 15.0, 18); // direction, power, timeOutDuration, yValue
         //x StateVFFF   * global_move_to_get_up_ramp = new State (this, & Navigator :: GlobalMoveUntilAboveY, Vector.up, 65, 15, 50); // direction, power, timeOutDuration, yValue // 20.0
         //x StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: GlobalMoveWhileTurningUntilAboveY, Vector2 (1, 4).getUnitVector (), 60, 60.0, 10, 50); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15
         // StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: GlobalMoveWhileTurningWithAbortUntilAboveY, Vector2 (1, 4).getUnitVector (), 80, 60.0, 10, 50-2); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15
         //- StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: PhysicsMoveWhileTurningUntilAboveY, Vector2 (-0.1, 1.0).getUnitVector (), 70, 60.0, -10, 50-2); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15 // 80 // -0.115, 1.0; 75, ..., -20
-        StateVFFFF  * global_move_while_turning_to_get_up_most_of_ramp = new StateVFFFF (this, & Navigator :: PhysicsMoveWhileTurningUntilAboveYStart, Vector2 (0, 1.0).getUnitVector (), 80, 60.0, 0, 32); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15 // 80 // -0.115, 1.0; 75, ..., -20
-        StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: PhysicsMoveWhileTurningUntilAboveYEnd, Vector2 (-0.1, 1.0).getUnitVector (), 60, 60.0, -30, 50); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15 // 80 // -0.115, 1.0; 75, ..., -20
-        StateFF     * align_to_global_angle_before_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 50);
-        StateFF     * slower_align_to_global_angle_before_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 25);
+        // ... 32),
+        StateVFFFF  * global_move_while_turning_to_get_up_most_of_ramp = new StateVFFFF (this, & Navigator :: PhysicsMoveWhileTurningUntilAboveYStart, Vector2 (0, 1.0).getUnitVector (), 80, 30.0, 0, 34.0+1.0); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15 // 80 // -0.115, 1.0; 75, ..., -20
+        // (-0.115, 1), 60.0, -30; 30
+        StateVFFFF  * global_move_while_turning_to_get_up_ramp = new StateVFFFF (this, & Navigator :: PhysicsMoveWhileTurningUntilAboveYEnd, Vector2 (-0.115, 1.0).getUnitVector (), 65, 30.0, -20-10, 50-2); // direction, power, timeOutDuration, turnPower, yValue // 80, ..., 15 // 80 // -0.115, 1.0; 75, ..., -20 // =15
+        StateFF     * align_to_global_angle_before_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 50 * SPEEDY_FACTOR);
+        StateFF     * slower_align_to_global_angle_before_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 25 * SPEEDY_FACTOR);
         // StateVFF    * abortion_tester = new StateVFF (this, & Navigator :: GlobalMoveDuration, Vector.up, 35,  1.0); // direction, power, duration
         // StateFF     * realign_to_global_angle_after_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 50); // degrees, power // 270 + angleOffset + 30 // -90 // 270
-        StateFF     * realign_to_global_angle_after_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 50); // degrees, power // 270 + angleOffset + 30 // -90 // 270
+        StateFF     * realign_to_global_angle_after_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -90, 50 * SPEEDY_FACTOR); // degrees, power // 270 + angleOffset + 30 // -90 // 270
         StateVFF    * get_centered_on_top_of_ramp_before_foosball = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (30, 52), 50,  0.0); // coordinate, power, distanceError
-        StateVFF    * make_sure_not_in_deadzone = new StateVFF (this, & Navigator :: PerformGlobalAbortion, Vector.down, 35,  24.0); // coordinate, power, distanceError
+        StateVFF    * make_sure_not_in_deadzone = new StateVFF (this, & Navigator :: PerformGlobalAbortion, Vector.down, 35 * SPEEDY_FACTOR,  24.0); // coordinate, power, distanceError
         
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
@@ -3310,6 +3316,7 @@ public:
         SM.Add (  stop  );
         SM.Add (  get_centered_on_top_of_ramp_before_foosball  );
         SM.Add (  stop  );
+        SM.Add (  make_sure_not_in_deadzone  );
         SM.Add (  realign_to_global_angle_after_ramp  );
         SM.Add (  stop  );
     }
@@ -3328,15 +3335,15 @@ public:
         // StateVFF    * move_left_to_token = new StateVFF (this, & Navigator :: MoveDistance, Vector.C, 35, 0.1); // direction, power, distance // 5.0
         // StateVFF    * move_dir_to_token = new StateVFF (this, & Navigator :: MoveDistance, Vector.BC, 35, 22); // direction, power, distance // 18.0
         // StateVFF    * move_left_to_token = new StateVFF (this, & Navigator :: AssistedMoveToCoordinate, Vector2 (20, 50), 50, 0.0); // coordinate, power, AssistedMoveToCoordinate
-        StateVFI    * move_left_to_token = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (20, 50-2), 50, 1); // coordinate, power, AssistedMoveToCoordinate
+        StateVFI    * move_left_to_token = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (20, 50-2), 50 * SPEEDY_FACTOR, 1); // coordinate, power, AssistedMoveToCoordinate
         
         // robot at token dispenser = 13.800, 42.800; was 14.0, 45
         // Vector2 tokenDropSpot = Vector2 (13.800 + 1.2, 44.0); // 15.5, 43 // 15.0, 45 // was working when 2.0; could be more centered // 1.7 // 1.5
         Vector2 tokenDropSpot = Vector2 (13.800 + 1.2 + 0.5, 44.0);
 
         // StateVFF    * move_dir_to_token = new StateVFF (this, & Navigator :: AssistedMoveToCoordinate, tokenDropSpot, 50, 0.0); // coordinate, power, distanceError
-        StateVFI    * move_dir_to_token = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, tokenDropSpot, 50, 1); // coordinate, power, distanceError
-        StateVFI    * precise_move_dir_to_token = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, tokenDropSpot, 50 * 0.50, 3); // coordinate, power, distanceError
+        StateVFI    * move_dir_to_token = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, tokenDropSpot, 50 * SPEEDY_FACTOR, 1); // coordinate, power, distanceError
+        StateVFI    * precise_move_dir_to_token = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, tokenDropSpot, 50 * 0.50 * SPEEDY_FACTOR, 3); // coordinate, power, distanceError
         // move forward to token dispenser (should mayhaps be more precise)
         // StateVFF    * move_forward_to_token = new StateVFF (this, & Navigator :: MoveDistance, Vector.AB, 35, 8.0); // direction, power, distance // was 8.0
         
@@ -3370,11 +3377,11 @@ public:
         
         // StateFF     * rotate_to_token = new StateFF (this, & Navigator :: TurnCCW, 180, 35); // degrees, power
         // StateFF     * global_rotate_to_token = new StateFF (this, & Navigator :: RotateToGlobalAngle, 60, 35); // degrees, power
-        StateFFI     * global_rotate_to_token = new StateFFI (this, & Navigator :: PreciseRotateToGlobalAngle, 60, 35, 1); // degrees, power, iterations
-        StateFFI     * global_rotate_to_token_with_less_power = new StateFFI (this, & Navigator :: PreciseRotateToGlobalAngle, 60, 12.5, 1); // degrees, power, iterations
+        StateFFI     * global_rotate_to_token = new StateFFI (this, & Navigator :: PreciseRotateToGlobalAngle, 60, 35 * SPEEDY_FACTOR, 1); // degrees, power, iterations
+        StateFFI     * global_rotate_to_token_with_less_power = new StateFFI (this, & Navigator :: PreciseRotateToGlobalAngle, 60, 12.5 * SPEEDY_FACTOR, 1); // degrees, power, iterations
         //- StateVFF    * move_to_token_again = new StateVFF (this, & Navigator :: MoveDistance, Vector.BC, 35, 0.5); // EF // was 1.4
         // StateVFF    * move_to_token_again = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 35, 0.5); // EF // was 1.4
-        StateVFI    * touch_the_token = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 35, D0); // direction, power, bumpID
+        StateVFI    * touch_the_token = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 50 * SPEEDY_FACTOR, D0); // direction, power, bumpID //- 35
         // StateVFF    * align_after_touching_token = new StateVFF (this, & Navigator :: MoveDuration, Vector.D, 25, 0.1); // direction, power, duration
         // StateFFI    * align_after_touching_token_2 = new StateFFI (this, & Navigator :: TurnUntilBumpCCW, 900, 35, D1);
         //- StateVFF    * move_back_from_token = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 35, 0.5); // EF // was 2.0 // then 1.5 // 2.0 // 1.5
@@ -3407,18 +3414,19 @@ public:
         // StateFF     * global_rotate_to_lever = new StateFF (this, & Navigator :: RotateToGlobalAngle, -75, 35); // degrees, power
         // StateVFI    * move_to_lever = new StateVFI (this, & Navigator :: PreciseMoveToCoordinate, Vector2 (10.0, 66), 50,  1); // coordinate, power, distanceError // 10, 62 // 12, 64 // 10.5, 66
         
-        StateVFF    * move_after_token = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (7, 50), 50, 0.0); // coordinate, power, iterations
-        StateFF     * rotate_to_face_left_wall = new StateFF (this, & Navigator :: RotateToGlobalAngle, -30, 35); // degrees, power // rotation angle may be incorrect
-        StateFF     * rotate_to_face_left_wall_with_less_power = new StateFF (this, & Navigator :: RotateToGlobalAngle, -30, 35 / 2.0); // degrees, power // rotation angle may be incorrect
-        StateVFI    * bump_into_left_wall = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 50, D0); // direction, power, bumpID
-        StateVFFFI  * turn_until_bump_to_make_even = new StateVFFFI (this, & Navigator :: MoveWhileTurningUntilBumpDuration, Vector.D, 35, 10.0, 35, D1); // direction, power, maxDuration, turnPower, bumpID
+        StateVFF    * make_sure_not_in_deadzone = new StateVFF (this, & Navigator :: PerformGlobalAbortion, Vector.down, 35, 12.0); // coordinate, power, F
+        StateVFF    * move_after_token = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (7, 50-1), 50 * SPEEDY_FACTOR, 0.0); // coordinate, power, iterations
+        StateFF     * rotate_to_face_left_wall = new StateFF (this, & Navigator :: RotateToGlobalAngle, -30, 35 * SPEEDY_FACTOR); // degrees, power // rotation angle may be incorrect
+        StateFF     * rotate_to_face_left_wall_with_less_power = new StateFF (this, & Navigator :: RotateToGlobalAngle, -30, 35 / 2.0 * SPEEDY_FACTOR); // degrees, power // rotation angle may be incorrect
+        StateVFI    * bump_into_left_wall = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 50 * SPEEDY_FACTOR, D0); // direction, power, bumpID
+        StateVFFFI  * turn_until_bump_to_make_even = new StateVFFFI (this, & Navigator :: MoveWhileTurningUntilBumpDuration, Vector.D, 35 * SPEEDY_FACTOR, 10.0, 35, D1); // direction, power, maxDuration, turnPower, bumpID
         
-        StateVFF    * move_upward_real_quick = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 5.0 * L_A_D); // direction, power, distance // 10 = about after gap // 8 // 7
-        StateVFF    * move_back_from_left_wall = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 50, 1.0 * L_A_D); // direction, power, distance // 2.0
+        StateVFF    * move_upward_real_quick = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50 * SPEEDY_FACTOR, (5.0-2.0) * L_A_D); // direction, power, distance // 10 = about after gap // 8 // 7
+        StateVFF    * move_back_from_left_wall = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 50 * SPEEDY_FACTOR, 1.0 * L_A_D); // direction, power, distance // 2.0
         
         StateFF     * rotate_to_lever = new StateFF (this, & Navigator :: TurnCW, 45, 50); // degrees, power // 15
-        StateVFF    * move_right_before_bump = new StateVFF (this, & Navigator :: MoveDistance, Vector.E, 50, 5.0 * L_A_D); // direction, power
-        StateVFI    * bump_into_lever_wall = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 50, D0); // direction, power, bumpID
+        StateVFF    * move_right_before_bump = new StateVFF (this, & Navigator :: MoveDistance, Vector.E, 50 * SPEEDY_FACTOR, 5.0 * L_A_D); // direction, power
+        StateVFI    * bump_into_lever_wall = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.D, 50 * SPEEDY_FACTOR, D0); // direction, power, bumpID
         
         StateVFF    * move_back_from_lever_wall = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 50, 0.85 * L_A_D); // direction, power // 3.0 // 2.0 // 1.35
         // StateVFF    * move_right_before_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 2.15 * L_A_D); // direction, power // 2.0
@@ -3432,7 +3440,9 @@ public:
         
         SM.Add (  move_after_token  );
         SM.Add (  stop  );
+        SM.Add (  make_sure_not_in_deadzone  );
         SM.Add (  rotate_to_face_left_wall  );
+        SM.Add (  make_sure_not_in_deadzone  );
         SM.Add (  stop  );
         SM.Add (  rotate_to_face_left_wall_with_less_power  );
         SM.Add (  stop  );
@@ -3597,7 +3607,7 @@ public:
         StateFF     * lower_servo_for_lever = new StateFF (this, & Navigator :: SetServoAngle, LOWERED_SERVO_ANGLE + 15, 1.0); // degrees, waitTime // 65.0 + 3.0 // + 30
         StateFF     * raise_servo = new StateFF (this, & Navigator :: SetServoAngle, RAISED_SERVO_ANGLE, 1.0); // degrees, waitTime
         StateVFF    * move_right_before_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.EF, 50, 2.0 * L_A_D); // direction, power // 0.16 // .25 // 0.20 // 1.0 // 2.0 // was 3.0
-        StateVFF    * move_backwards = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 50, 1.25 * L_A_D); // direction, power // 3.0 // 2.5 // was 1.5
+        StateVFF    * move_backwards = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 50, 1.25 * L_A_D); // direction, power // 3.0 // 2.5 // was 1.5 // 1.25
         StateVFF    * move_back_to_pull_lever = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 35, 1.3 * L_A_D); // direction, power // 3.0 // 2.0
         
         
@@ -3655,7 +3665,7 @@ public:
         
         StateFF     * align_to_foosball = new StateFF (this, & Navigator :: TurnCW, 15, 35); // degrees, power // 15 // 25
         // StateVFI    * move_right_parralel_to_rod_until_bump = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.F, 40, F0); // direction, power, bumpID
-        StateVFFI    * move_right_parralel_to_rod_until_bump = new StateVFFI (this, & Navigator :: MoveUntilBumpDurationToGetToFoosballWall, Vector.F, 40, 15.0, F0); // direction, power, maxDuration, bumpID
+        StateVFFI    * move_right_parralel_to_rod_until_bump = new StateVFFI (this, & Navigator :: MoveUntilBumpDurationToGetToFoosballWall, Vector.F, 50 * SPEEDY_FACTOR, 7.5, F0); // direction, power, maxDuration, bumpID
         StateVFI    * move_up_to_get_snug_with_foosball_box = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.E, 35, D1); // direction, power // 0.16 // .25 // 0.20 // DE
         // StateVFI    * move_right_parralel_to_rod_until_bump_again = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.F, 20 + 20, F0); // direction, power, bumpID
         StateVFFFI  * rotate_until_bump_to_get_snug = new StateVFFFI (this, & Navigator :: MoveWhileTurningUntilBumpDuration, Vector.F, 35, 10.0, 35, F1); // direction, power, maxDuration, turnPower, bumpID
@@ -3771,8 +3781,12 @@ public:
         StateVFFF   * drag_foosball_leftwards = new StateVFFF (this, & Navigator :: MoveWhileTurningDuration, Vector.BC, 35 * F_A_P, 1.6 * F_A_D, 5 * F_A_P); // EF // was 2.0 // then 1.5 // 20 // -20 // 2.0 // 10
         
         // push the foosball discs again
-        StateVFF    * move_right_before_push = new StateVFF (this, & Navigator :: MoveDuration, Vector.EF, 35 * F_A_P, 1.0 * F_A_D); // direction, power // 0.16 // .25 // 0.20
-        StateVFFF   * push_foosball_leftwards = new StateVFFF (this, & Navigator :: MoveWhileTurningDuration, Vector.BC, 35 * F_A_P, 1.05 * F_A_D, 2 * F_A_P); // 1.0-0.15 // 0.85
+        //- newly edited
+        StateVFF    * move_right_before_push = new StateVFF (this, & Navigator :: MoveDuration, Vector.EF, 35 * F_A_P, 1.3175 * F_A_D); // direction, power // 0.16 // .25 // 0.20 // 1.0
+        //- newly edited
+        StateVFFF   * push_foosball_leftwards = new StateVFFF (this, & Navigator :: MoveWhileTurningDuration, Vector.BC, 35 * F_A_P, 1.5 * F_A_D, 2 * F_A_P); // 1.0-0.15 // 0.85 // 1.05
+        //- newly edited
+        StateVFF    * move_forward_before_push = new StateVFF (this, & Navigator :: MoveDistance, Vector.D, 35 * F_A_P, 0.6 * F_A_D); // direction, power // 0.16 // .25 // 0.20
         StateFF     * lower_servo_for_foosball_push = new StateFF (this, & Navigator :: SetServoAngle, LOWERED_SERVO_ANGLE - 5.0, 1.0); // degrees, waitTime
         
         // move back a bit
@@ -3781,7 +3795,7 @@ public:
         StateFF     * straighten_after_foosball = new StateFF (this, & Navigator :: TurnCW, 1 * F_A_D, 35 * F_A_P); // degrees, power // 35
         // ***** add abort procedure here ***** //
         // StateVFI    * move_right_after_foosball = new StateVFI (this, & Navigator :: MoveUntilBump, Vector.EF, 30, F0); // direction, power, bumpID
-        StateVFFI   * move_right_after_foosball = new StateVFFI (this, & Navigator :: MoveUntilBumpDuration, Vector.EF, 30, 6.0, F0); // direction, power, maxDuration, bumpID
+        StateVFFI   * move_right_after_foosball = new StateVFFI (this, & Navigator :: MoveUntilBumpDuration, Vector.EF, 35, 6.0, F0); // direction, power, maxDuration, bumpID
 
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
@@ -3809,6 +3823,9 @@ public:
         SM.Add (  stop  );
         // move parrallel to the bar
         SM.Add (  move_right_before_push  );
+        SM.Add (  stop  );
+        // move forward a little bit before push
+        SM.Add (  move_forward_before_push  );
         SM.Add (  stop  );
         // lower servo
         SM.Add (  lower_servo_for_foosball_push  );
@@ -3914,11 +3931,11 @@ public:
         // *********** INITIALIZE state objects *********** //
         
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
-        StateVFF    * move_down_to_get_to_ramp = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 35, 16); // direction, power, distance // 18
+        StateVFF    * move_down_to_get_to_ramp = new StateVFF (this, & Navigator :: MoveDistance, Vector.Aa, 35 * SPEEDY_FACTOR, 16); // direction, power, distance // 18
         StateVFF    * make_sure_not_in_deadzone = new StateVFF (this, & Navigator :: PerformLocalAbortion, Vector.Aa, 35,  24.0); // coordinate, power, maxDistance
         StateVFFF   * global_move_to_get_down_ramp = new StateVFFF (this, & Navigator :: GlobalMoveUntilBelowY, Vector.down, 80, 15.0, 22); // direction, power, timeOutDuration, yValue // 65
         // StateVFF    * global_move_to_get_down_ramp = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (28.5, 15), 50,  0.0); // coordinate, power, distanceError
-        StateVFF    * get_centered_on_top_of_ramp = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (31, 52), 50,  0.0); // coordinate, power, distanceError // 30, 52 // 32, 52
+        StateVFF    * get_centered_on_top_of_ramp = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (31, 52-1), 50 * SPEEDY_FACTOR,  0.0); // coordinate, power, distanceError // 30, 52 // 32, 52
         StateFF     * make_two_wheels_face_down_ramp = new StateFF (this, & Navigator :: RotateToGlobalAngle, -60 + 0 - 10, 50); // degrees, power
         
         
@@ -3928,6 +3945,7 @@ public:
         SM.Add (  make_sure_not_in_deadzone  );
         SM.Add (  stop  );
         SM.Add (  get_centered_on_top_of_ramp  );
+        SM.Add (  stop  );
         SM.Add (  make_sure_not_in_deadzone  );
         SM.Add (  stop  );
         SM.Add (  make_two_wheels_face_down_ramp  );
@@ -3945,21 +3963,33 @@ public:
         // *********** INITIALIZE state objects *********** //
         
         StateF      * stop = new StateF (this, & Navigator :: StopVehicle, STOP_DURATION); // stopTime
-        StateVFF    * move_to_avoid_DDR = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (18, 14), 50,  0.0); // coordinate, power, distanceError // 6, 6
+        StateVFF    * move_to_avoid_DDR = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (18, 14), 50 * SPEEDY_FACTOR,  0.0); // coordinate, power, distanceError // 6, 6
         StateVoid   * enable_strobe_mode = new StateVoid (this, & Navigator :: EnableStrobeMode);
         StateVoid   * disable_strobe_mode = new StateVoid (this, & Navigator :: DisableStrobeMode);
-        StateVFF    * go_touch_that_button = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (7.3 - 3, 10.599 - 3), 50,  0.0); // coordinate, power, distanceError // 4, 6
+        StateVFF    * go_touch_that_button = new StateVFF (this, & Navigator :: MoveToCoordinate, Vector2 (7.3 - 3, 10.599 - 3), 50 * SPEEDY_FACTOR,  0.0); // coordinate, power, distanceError // 4, 6
         
         // the final stop
         StateF      * stop_at_the_end = new StateF (this, & Navigator :: StopVehicle, 0.01); // stopTime
         
         
         // *********** ADD REFERENCES of state objects to state machine *********** //
-        
-        SM.Add (  move_to_avoid_DDR  );
+
         SM.Add (  enable_strobe_mode  );
+        SM.Add (  move_to_avoid_DDR  );
         SM.Add (  go_touch_that_button  );
         SM.Add (  disable_strobe_mode  );
+        SM.Add (  stop  );
+        SM.Add (  move_to_avoid_DDR  );
+        SM.Add (  stop  );
+        SM.Add (  go_touch_that_button  );
+        SM.Add (  stop  );
+        SM.Add (  move_to_avoid_DDR  );
+        SM.Add (  stop  );
+        SM.Add (  go_touch_that_button  );
+        SM.Add (  stop  );
+        SM.Add (  move_to_avoid_DDR  );
+        SM.Add (  stop  );
+        SM.Add (  go_touch_that_button  );
         SM.Add (  stop  );
         
         // perform the final stop
@@ -4474,9 +4504,13 @@ void mainLoop () {
     vehicle.SetRotation (rps.Heading () + 240.0 - 60.0); // RPS.Heading () + 255 // rps.Heading () + 240 - 60
     navigator.Update (); // perform the entire navigation procedure
     
-    
+    float strobeSpeedFactor = 1.0;
+    if (strobeMode) {
+        strobeSpeedFactor = 0.2;
+    }
+
     // update the LCD screen only after a fixed time interval has passed
-    if (TimeNow () - timeSinceLastFrameUpdate > UPDATE_INTERVAL) { // I've heard TimeNow is bad, so the game may break after a certain amount of time has passed
+    if (TimeNow () - timeSinceLastFrameUpdate > UPDATE_INTERVAL * strobeSpeedFactor) { // I've heard TimeNow is bad, so the game may break after a certain amount of time has passed
         timeSinceLastFrameUpdate = TimeNow ();
         
         if (IS_SIMULATION) {
