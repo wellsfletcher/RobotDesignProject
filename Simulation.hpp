@@ -1,4 +1,9 @@
 #define IS_SIMULATION 0
+#define SUB_SIMULATION_ENABLED 1
+
+#define FULL_SIMULATION_ENABLED 1  &&  SUB_SIMULATION_ENABLED
+#define SIMULATED_COLLISION_ENABLED 1   &&   FULL_SIMULATION_ENABLED
+#define SIMULATED_BUMPS_ENABLED 1  &&  FULL_SIMULATION_ENABLED //  &&  SIMULATED_COLLISION_ENABLED
 /*
 
 
@@ -27,7 +32,8 @@ extern Vehicle simulatedVehicle; // this declaration enables the use of the simu
 
 
 
-#if !IS_SIMULATION // if this is not the simulation, then this chunck of code is used. Otherwise, this code is ignored.
+
+#if !IS_SIMULATION  &&  !SUB_SIMULATION_ENABLED // if this is not the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
 
 
@@ -45,6 +51,9 @@ extern Vehicle simulatedVehicle; // this declaration enables the use of the simu
 
 class Simulation {
 public:
+    Simulation (Vehicle *vehicle, bool isSubSimulation) {
+        veh = vehicle;
+    }
     Simulation (Vehicle *vehicle) {
         veh = vehicle;
     }
@@ -65,7 +74,7 @@ private:
 
 
 #endif
-#if IS_SIMULATION // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
+#if IS_SIMULATION // &&  SUB_SIMULATION_ENABLED // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
 /*
 
 
@@ -81,14 +90,36 @@ private:
 
 
 
+#include <stdio.h>
+// #include "GFWMotor.hpp"
+
+
+
+
+
+
+
+#endif
+#if SUB_SIMULATION_ENABLED // if this is the simulation, then this chunck of code is used. Otherwise, this code is ignored.
+/*
+ 
+ 
+ 
+ SIMULATION ENABLED only stuff
+ 
+ 
+ 
+ */
+
+
+
+
+
+
 // include statements
 
 #ifndef Simulation_hpp
 #define Simulation_hpp
-#include <stdio.h>
-#endif /* Simulation_hpp */
-
-// #include "GFWMotor.hpp"
 
 
 /************************************************************************ GLOBAL SIMULATION VARIABLE DECLERATIONS ************************************************************************/
@@ -99,105 +130,755 @@ private:
 // ...
 
 
+/************************ PHYSICS CLASSES ************************/
+
+#if SIMULATED_COLLISION_ENABLED
+// class that contains a bunch off arrays of pointers to different shape objects; used to specify which objects a physics object can collide with
+class LayerMask {
+public:
+    LayerMask (LayerMask *tempLM) {
+        edgeCount = 0;
+        boxCount = 0;
+        invertedBoxCount = 0;
+        polygonCount = 0;
+    }
+    LayerMask () {
+        edgeCount = 0;
+        boxCount = 0;
+        invertedBoxCount = 0;
+        polygonCount = 0;
+    }
+    static const int MAX_EDGES = 8;
+    static const int MAX_BOXES = 8;
+    static const int MAX_INVERTED_BOXES = 1;
+    static const int MAX_POLYGONS = 8;
+    int edgeCount;
+    int boxCount;
+    int invertedBoxCount;
+    int polygonCount;
+    Edge edges [MAX_EDGES];
+    Box boxes [MAX_BOXES];
+    Box invertedBoxes [MAX_INVERTED_BOXES];
+    Polygon polygons [MAX_POLYGONS];
+    
+    // sets the edge shape objects to be included in the layer mask
+    void SetEdges (Edge tempEdges [MAX_EDGES], int tempEdgeCount) {
+        edgeCount = tempEdgeCount;
+        for (int k = 0; k < edgeCount; k++) {
+            edges [k] = tempEdges [k];
+        }
+    }
+    // sets the box shape objects to be included in the layer mask
+    void SetBoxes (Box tempBoxes [MAX_BOXES], int tempBoxCount) {
+        boxCount = tempBoxCount;
+        for (int k = 0; k < boxCount; k++) {
+            boxes [k] = tempBoxes [k];
+        }
+    }
+    // sets the inverted box shape objects to be included in the layer mask
+    void SetInvertedBoxes (Box tempBoxes [MAX_INVERTED_BOXES], int tempBoxCount) {
+        invertedBoxCount = tempBoxCount;
+        for (int k = 0; k < invertedBoxCount; k++) {
+            invertedBoxes [k] = tempBoxes [k];
+        }
+    }
+    // sets the edge shape objects to be included in the layer mask
+    void SetPolygons (Polygon tempObjs [MAX_POLYGONS], int tempCount) {
+        polygonCount = tempCount;
+        for (int k = 0; k < tempCount; k++) {
+            polygons [k] = tempObjs [k];
+        }
+    }
+    // converts the given layer mask to a layer mask containing only polygons
+    const static LayerMask ConvertToPolygonMask (LayerMask LM) {
+        LayerMask polyMask = LayerMask ();
+        int count;
+        int endCount;
+        
+        count = 0;
+        endCount = count + LM.polygonCount;
+        
+        for (int k = count; k < endCount; k++) {
+            polyMask.polygons [k] = Polygon (LM.polygons [k - count]);
+        }
+        
+        count = endCount; // - 1
+        endCount = count + LM.invertedBoxCount;
+        
+        for (int k = count; k < endCount; k++) {
+            // polyMask.polygons [k] = Polygon::ConvertToPolygon (LM.invertedBoxes [k]);
+            polyMask.polygons [k] = Polygon::ConvertToFlippedPolygon (LM.invertedBoxes [k - count]);
+        }
+        
+        count = endCount;
+        endCount = count + LM.boxCount;
+        
+        for (int k = count; k < endCount; k++) {
+            polyMask.polygons [k] = Polygon::ConvertToPolygon (LM.boxes [k - count]);
+        }
+        
+        count = endCount;
+        endCount = count + LM.edgeCount;
+        
+        for (int k = count; k < endCount; k++) {
+            polyMask.polygons [k] = Polygon::ConvertToPolygon (LM.edges [k - count]);
+        }
+        
+        polyMask.polygonCount = endCount;
+        
+        return polyMask;
+    }
+private:
+};
+#else
+
+
+
+
+
+
+class LayerMask {
+public:
+    LayerMask (LayerMask *tempLM) {
+
+    }
+    LayerMask () {
+
+    }
+private:
+};
+
+
+
+
+
+
+#endif
+#if !SIMULATED_BUMPS_ENABLED
+
+
+
+
+
+
+
+class Raycast {
+public:
+    Raycast (LayerMask tempLM, Vector2 origin, Vector2 direction, float maxDistance, char type) {
+        
+    }
+    Raycast () {
+        
+    }
+private:
+};
+
+
+
+
+
+
+
+#endif
+#if SIMULATED_BUMPS_ENABLED
+class Raycast {
+public:
+    // Raycast (Vector2 origin, Vector2 direction, float maxDistance = 99999, char type = 'X');
+    Raycast (LayerMask tempLM, Vector2 origin, Vector2 direction, float maxDistance, char type) {
+        LM = tempLM; // note that it doesn't currently do a deep copy
+        stepSize = 0.1; // was 1.0
+        hit = false;
+        colliderType = 'X';
+        point = Vector2 ();
+        distance = 0;
+        float currentDistance = 0; // current distance of the particle
+        
+        pos = Vector2 (origin.x, origin.y); // deep copy the origin
+        // convert direction into a unit vector * stepSize
+        dir = direction.getUnitVector ();
+        dir = Vector2 (dir.x * stepSize, dir.y * stepSize);
+        
+        // iterate through all the collision object types and check for collision with them
+        while (hit == false && currentDistance < maxDistance) {
+            currentDistance = Distance (origin, pos);
+            if (!hit) {
+                // check for collision with boxes
+                for (int j = 0; j < LM.invertedBoxCount && !hit; j++) {
+                    if (CheckInvertedBoxCollision (LM.invertedBoxes [j])) { // if there was a collision then
+                        // cout << "oi " << TimeNow () << endl;
+                        hit = true; // note that there was a collision
+                        point = pos;
+                        distance = Distance (origin, point); // or currentDistance
+                        colliderType = 'i'; // collider type equals edge
+                        break;
+                    }
+                }
+                
+            } if (!hit) {
+                
+                // check for collision with boxes
+                for (int j = 0; j < LM.boxCount && !hit; j++) {
+                    if (CheckBoxCollision (LM.boxes [j])) { // if there was a collision then
+                        hit = true; // note that there was a collision
+                        point = pos;
+                        distance = Distance (origin, point); // or currentDistance
+                        colliderType = 'b'; // collider type equals edge
+                        break;
+                    }
+                }
+                
+            } if (!hit) {
+                
+                // check for collision with edges
+                for (int j = 0; j < LM.edgeCount && !hit; j++) { // CollideEdge (tunnelEdges [j]);
+                    LM.edges [j].normal = LM.edges [j].getNormal (); // fite me
+                    if (CheckEdgeCollision (LM.edges [j])) { // if there was a collision then
+                        // cout << j;
+                        hit = true; // note that there was a collision
+                        point = pos;
+                        distance = Distance (origin, point); // or currentDistance
+                        colliderType = 'e'; // collider type equals edge
+                        break; // may not actually be breaking fully
+                    }
+                }
+                
+            }
+            // increment the particle
+            pos = Vector2 (pos.x + dir.x, pos.y + dir.y);
+        }
+        if (hit == false && currentDistance >= maxDistance) { // if the loop exited due to the distance limit being exceeded
+            point = pos;
+        }
+    }
+    Raycast () {
+        
+    }
+    bool hit; // whether the ray hit or not
+    char colliderType; // type of collider hit the ray
+    // Shape collider; // the collider hit by the ray
+    Vector2 normal; // the normal of the surface hit by the ray
+    Vector2 point; // the point in which the ray hit the collider's surface
+    float distance; // the distance from the origin to where the ray hit the collider's surface
+private:
+    float stepSize; // the step size per iteration of the raycast
+    Vector2 pos; // current position of the particle
+    Vector2 dir; // standarized direction of the raycast
+    LayerMask LM; // a layer mask denoting the shape objects in which the raycast can collide with
+    // checks if the bullet has collided with a box collision object
+    bool CheckBoxCollision (Box obj) {
+        bool collided = false;
+        // convert the box into collision edges
+        Edge southEdge = Edge (obj.points[2], obj.points[3], 0);
+        Edge westEdge = Edge (obj.points[0], obj.points[2], 1);
+        Edge northEdge = Edge (obj.points[0], obj.points[1], 2);
+        Edge eastEdge = Edge (obj.points[1], obj.points[3], 3);
+        
+        Edge boxEdges [4];
+        int boxEdgeCount = 0;
+        boxEdges [boxEdgeCount++] = southEdge;
+        boxEdges [boxEdgeCount++] = westEdge;
+        boxEdges [boxEdgeCount++] = northEdge;
+        boxEdges [boxEdgeCount++] = eastEdge;
+        
+        for (int k = 0; !collided && k < boxEdgeCount; k++) {
+            if (CheckEdgeCollision (boxEdges [k])) {
+                collided = true;
+            }
+        }
+        
+        return collided;
+    }
+    bool CheckInvertedBoxCollision (Box obj) {
+        bool collided = false;
+        
+        // convert the box into collision edges
+        Edge southEdge = Edge (obj.points[2], obj.points[3], 2);
+        Edge westEdge = Edge (obj.points[0], obj.points[2], 3);
+        Edge northEdge = Edge (obj.points[0], obj.points[1], 0);
+        Edge eastEdge = Edge (obj.points[1], obj.points[3], 1);
+        
+        Edge boxEdges [4];
+        int boxEdgeCount = 0;
+        boxEdges [boxEdgeCount++] = southEdge;
+        boxEdges [boxEdgeCount++] = westEdge;
+        boxEdges [boxEdgeCount++] = northEdge;
+        boxEdges [boxEdgeCount++] = eastEdge;
+        
+        for (int k = 0; !collided && k < boxEdgeCount; k++) {
+            if (CheckEdgeCollision (boxEdges [k])) {
+                collided = true;
+                // normal = Vector2 (boxEdges [k].norm.x, boxEdges [k].norm.y);
+            }
+        }
+
+        return collided;
+    }
+    bool CheckEdgeCollision (Edge edge) {
+        Vector2 point = pos;
+        float EDGE_TOL = 2.0; // initialize edge tolerance, which is essentially a pseudo width for collision edges
+        bool collided = false;
+
+        Vector2 pointRelativeToEdge0 = Vector2 (point.x - edge.points [0].x, point.y - edge.points [0].y);
+        Vector2 dirEdge0ToEdge1 = Vector2::SlopeVect (edge.points [0], edge.points [1]);
+        float xScal0 = Vector2::Scal (pointRelativeToEdge0, dirEdge0ToEdge1);
+        
+        Vector2 pointRelativeToEdge1 = Vector2 (point.x - edge.points [1].x, point.y - edge.points [1].y);
+        Vector2 dirEdge1ToEdge0 = Vector2::SlopeVect (edge.points [1], edge.points [0]);
+        float xScal1 = Vector2::Scal (pointRelativeToEdge1, dirEdge1ToEdge0);
+        // if the point is in between the two "X" points denoting the edge (if you pretend the edge is the x-axis and its normal vector is the y-axis)
+        // (if scal (the point's position relative to the edge's first point, the direction from the edge's first point to its second point) is positive)
+        // (and if scal (the point's position relative to the edge's second point, the direction from the edge's second point to its first point) is positive)
+        if (xScal0 > 0 && xScal1 > 0) { // maybe should be >= ... most likely doesn't matter that much
+            
+            // the imaginary point is calculated by subtracting the edge's unit normal vector * EDGE_TOL from the edge's first point
+            Vector2 imaginaryPoint = Vector2 (edge.points [0].x - edge.normal.x * EDGE_TOL, edge.points [0].y - edge.normal.y * EDGE_TOL);
+            
+            pointRelativeToEdge0 = pointRelativeToEdge0;
+            Vector2 dirEdge0ToImaginary = Vector2::SlopeVect (edge.points [0], imaginaryPoint);
+            float yScal0 = Vector2::Scal (pointRelativeToEdge0, dirEdge0ToImaginary);
+            
+            Vector2 pointRelativeToImaginary = Vector2 (point.x - imaginaryPoint.x, point.y - imaginaryPoint.y);
+            Vector2 dirImaginaryToEdge0 = Vector2::SlopeVect (imaginaryPoint, edge.points [0]);
+            float yScal1 = Vector2::Scal (pointRelativeToImaginary, dirImaginaryToEdge0);
+            
+            // if the point is in between the two (imaginary) "Y" points denoting the edge (pretend the edge has an imaginary depth (so the edge basically a box); the two points would be the first point of the actual edge, and that point with the imaginary depth added onto it (where that imaginary depth equals EDGE_TOL))
+            // (if scal (the point's position relative to the edge's first point, the direction from the edge's first point to the imaginary point) is positive)
+            // (and if scal (the point's position relative to the imaginary point, the direction from the imaginary point to the edge's first point) is positive)
+            if (yScal0 > 0 && yScal1 > 0) {
+                // then the point has indeed collided with the edge!
+                collided = true; // indicate that it be that way
+            }
+            
+        }
+        
+        return collided; // collided true
+    }
+    // calculates distance between two points
+    float Distance (Vector2 start, Vector2 end) {
+        return sqrt (  pow (end.x - start.x, 2.0)  +  pow (end.y - start.y, 2.0)  );
+    }
+};
+#endif
+
+
 /************************************************************************ SIMULATION CODE ************************************************************************/
+
+class PhysicsObject {
+public:
+    PhysicsObject (Polygon tempShape, Vector2 tempPos, Vector2 tempVel, float tempAngVel, float tempMass) {
+        shape = Polygon (tempShape);
+        pos = Vector2 (tempPos.x, tempPos.y);
+        vel = Vector2 (tempVel.x, tempVel.y);
+        angVel = tempAngVel;
+        
+        mass = tempMass;
+    }
+    PhysicsObject () {
+        
+    }
+    Polygon shape;
+    Vector2 pos;
+    Vector2 vel;
+    float angVel;
+    float mass;
+private:
+};
+
+
+
+#if SIMULATED_COLLISION_ENABLED
+// // physics system with one dynamic physics object and several static objects
+// in retrospect, I should have set this up more like how the raycast object is
+class PhysicsCalculator {
+public:
+    PhysicsCalculator (LayerMask tempLM, PhysicsObject tempPhysObj) {
+        EDGE_TOL = 2.0;
+        
+        LM = tempLM; // LM should only contain polygons
+        physObj = tempPhysObj;
+        // statCount = 0;
+        
+        force = Vector2 (0, 0);
+        torque = 0;
+    }
+    PhysicsCalculator () {
+
+    }
+    LayerMask LM;
+    PhysicsObject physObj;
+    
+    // temporary variables set after collision
+    Vector2 force;
+    float torque;
+    
+    void UpdatePhysicsObjectVars (Polygon tempShape, Vector2 tempPos, Vector2 tempVel, float tempAngVel) {
+        Polygon newPoly = Polygon (tempShape);
+        newPoly.Translate (tempPos);
+        physObj = PhysicsObject (newPoly, tempPos, tempVel, tempAngVel, physObj.mass);
+    }
+    void CalculateCollisions () {
+        bool collided = false;
+        // reset vars
+        torque = 0;
+        force = Vector2 (0, 0);
+        
+        // check for collision with edges
+        for (int k = 0; k < LM.polygonCount; k++) { // CollideEdge (tunnelEdges [j]);
+            collided = collided || CollideWithPolygon (LM.polygons [k]);
+        }
+    }
+private:
+    // create constants
+    float EDGE_TOL; // edge tolerance
+    // simulates collision between a this.physObj and the given static polygon
+    // updates this.force and this.torque to be the force and torque applied to the physics due to the collision
+    // returns whether there was a collision
+    bool CollideWithPolygon (Polygon poly) {
+        bool collided = false;
+        
+        // calculate collision between physics object points and static object (polygon) edges
+        
+        Polygon pointPoly = physObj.shape;
+        Polygon edgePoly = poly;
+        
+        for (int i = 0; i < pointPoly.length; i++) {
+            Vector2 point = pointPoly.points [i];
+            for (int k = 0; k < edgePoly.length; k++) { // edgePoly.length-1
+                Edge edge;
+                if (k != edgePoly.length - 1) {
+                    edge = Edge (   Vector2 (edgePoly.points [k].x, edgePoly.points [k].y),  Vector2 (edgePoly.points [k+1].x, edgePoly.points [k+1].y)   );
+                } else if (k > 2) { // if it is a real polygon...
+                    edge = Edge (   Vector2 (edgePoly.points [k].x, edgePoly.points [k].y),  Vector2 (edgePoly.points [0].x, edgePoly.points [0].y)   );
+                }
+                bool justCollided = CheckCollision (point, edge);
+                
+                if (justCollided) {
+                    collided = true;
+                    
+                    // do physics calculations
+                    CalculateForces (point, edge, false);
+                }
+            }
+        }
+        
+        // calculate collision between physics object edges and static object (polygon) points
+        
+        pointPoly = poly;
+        edgePoly = physObj.shape;
+        
+        for (int i = 0; i < pointPoly.length; i++) {
+            Vector2 point = pointPoly.points [i];
+            for (int k = 0; k < edgePoly.length; k++) { // edgePoly.length-1
+                Edge edge;
+                if (k != edgePoly.length - 1) {
+                    edge = Edge (   Vector2 (edgePoly.points [k].x, edgePoly.points [k].y),  Vector2 (edgePoly.points [k+1].x, edgePoly.points [k+1].y)   );
+                } else if (k > 2) { // if it is a real polygon...
+                    edge = Edge (   Vector2 (edgePoly.points [k].x, edgePoly.points [k].y),  Vector2 (edgePoly.points [0].x, edgePoly.points [0].y)   );
+                }
+                bool justCollided = CheckCollision (point, edge);
+                
+                if (justCollided) {
+                    collided = true;
+                    
+                    // do physics calculations
+                    CalculateForces (point, edge, true);
+                }
+            }
+        }
+        
+        return collided;
+    }
+    
+    // updates this.force and this.torque
+    void CalculateForces (Vector2 point, Edge edge, bool isFlipped) {
+        int flipper = 1;
+        // if the calculated forces should be flipped ...
+        if (isFlipped) {
+            flipper = -1;
+        }
+        float MAGIC_ANG_ACCEL_NUMBER = 2.66; // 16.6; // 2.66; // 1.66
+        float RESTI = 2.0; // (kind of) coefficient of restitution // 2.0
+        // force = Vector2 (edge.normal.x * abs (physObj.vel.x) * RESTI, edge.normal.y * abs (physObj.vel.y) * RESTI);
+        force = Vector2 (force.x + edge.normal.x * abs (physObj.vel.x) * (RESTI * flipper), force.y + edge.normal.y * abs (physObj.vel.y) * (RESTI * flipper));
+        
+        Vector2 angForce = Vector2 (edge.normal.x * (0.1 * RESTI * MAGIC_ANG_ACCEL_NUMBER * flipper), edge.normal.y * (0.1 * RESTI * MAGIC_ANG_ACCEL_NUMBER * flipper)); // hmmm
+        Vector2 radialPosition = Vector2 (point.x - physObj.pos.x, point.y - physObj.pos.y);
+        torque = torque + radialPosition.CalculateCrossProduct (angForce);
+    }
+    
+    // checks if the given point has collided with the given edge
+    bool CheckCollision (Vector2 point, Edge edge) {
+        bool collided = false;
+        
+        //~ float velocityScal = Vector2::Scal (edge.normal, physObj.vel);
+        //~ if the physics object is going against the direction of the edge's normal vector
+        //~ (if proj (edge's normal vector, physObj's velocity) is the opposite sign of the normal vector ... if scal (edge's normal vector, physObj's velocity) is negative)
+        //~ if (velocityScal < 0) {
+        
+        Vector2 pointRelativeToEdge0 = Vector2 (point.x - edge.points [0].x, point.y - edge.points [0].y);
+        Vector2 dirEdge0ToEdge1 = Vector2::SlopeVect (edge.points [0], edge.points [1]);
+        float xScal0 = Vector2::Scal (pointRelativeToEdge0, dirEdge0ToEdge1);
+        
+        Vector2 pointRelativeToEdge1 = Vector2 (point.x - edge.points [1].x, point.y - edge.points [1].y);
+        Vector2 dirEdge1ToEdge0 = Vector2::SlopeVect (edge.points [1], edge.points [0]);
+        float xScal1 = Vector2::Scal (pointRelativeToEdge1, dirEdge1ToEdge0);
+        // if the point is in between the two "X" points denoting the edge (if you pretend the edge is the x-axis and its normal vector is the y-axis)
+        // (if scal (the point's position relative to the edge's first point, the direction from the edge's first point to its second point) is positive)
+        // (and if scal (the point's position relative to the edge's second point, the direction from the edge's second point to its first point) is positive)
+        if (xScal0 > 0 && xScal1 > 0) { // maybe should be >= ... most likely doesn't matter that much
+        
+            // the imaginary point is calculated by subtracting the edge's unit normal vector * EDGE_TOL from the edge's first point
+            Vector2 imaginaryPoint = Vector2 (edge.points [0].x - edge.normal.x * EDGE_TOL, edge.points [0].y - edge.normal.y * EDGE_TOL);
+            
+            pointRelativeToEdge0 = pointRelativeToEdge0;
+            Vector2 dirEdge0ToImaginary = Vector2::SlopeVect (edge.points [0], imaginaryPoint);
+            float yScal0 = Vector2::Scal (pointRelativeToEdge0, dirEdge0ToImaginary);
+            
+            Vector2 pointRelativeToImaginary = Vector2 (point.x - imaginaryPoint.x, point.y - imaginaryPoint.y);
+            Vector2 dirImaginaryToEdge0 = Vector2::SlopeVect (imaginaryPoint, edge.points [0]);
+            float yScal1 = Vector2::Scal (pointRelativeToImaginary, dirImaginaryToEdge0);
+            
+            // if the point is in between the two (imaginary) "Y" points denoting the edge (pretend the edge has an imaginary depth (so the edge basically a box); the two points would be the first point of the actual edge, and that point with the imaginary depth added onto it (where that imaginary depth equals EDGE_TOL))
+            // (if scal (the point's position relative to the edge's first point, the direction from the edge's first point to the imaginary point) is positive)
+            // (and if scal (the point's position relative to the imaginary point, the direction from the imaginary point to the edge's first point) is positive)
+            if (yScal0 > 0 && yScal1 > 0) {
+                // then the point has indeed collided with the edge!
+                collided = true; // indicate that it be that way
+            }
+            
+            //~ }
+        }
+        
+        return collided;
+    }
+    
+    // check for collision between the points of the first polygon and the edges of the second polygon
+    bool CheckCollisionBetweenPolygonEdgesAndPoints (Polygon pointPoly, Polygon edgePoly) {
+        bool collided = false;
+        
+        for (int i = 0; !collided && i < pointPoly.length; i++) {
+            Vector2 point = pointPoly.points [i];
+            for (int k = 0; !collided && k < edgePoly.length-1; k++) {
+                Edge edge = Edge (   Vector2 (edgePoly.points [k].x, edgePoly.points [k].y),  Vector2 (edgePoly.points [k+1].x, edgePoly.points [k+1].y)   );
+                collided = CheckCollision (point, edge);
+            }
+        }
+        
+        return collided; // ope this method would also need to return the collision point and edge to be useful
+    }
+};
+#else
+
+
+
+
+
+
+class PhysicsCalculator {
+public:
+    PhysicsCalculator (LayerMask tempLM, PhysicsObject tempPhysObj) {
+
+    }
+    PhysicsCalculator () {
+        
+    }
+    LayerMask LM;
+    PhysicsObject physObj;
+    Vector2 force;
+    float torque;
+    
+    void UpdatePhysicsObjectVars (Polygon tempShape, Vector2 tempPos, Vector2 tempVel, float tempAngVel) {
+
+    }
+    void CalculateCollisions () {
+
+    }
+private:
+    // create constants
+    float EDGE_TOL; // edge tolerance
+    // simulates collision between a this.physObj and the given static polygon
+    // updates this.force and this.torque to be the force and torque applied to the physics due to the collision
+    // returns whether there was a collision
+    bool CollideWithPolygon (Polygon poly) {
+        bool collided = false;
+        return collided;
+    }
+    
+    // updates this.force and this.torque
+    void CalculateForces (Vector2 point, Edge edge, bool isFlipped) {
+
+    }
+    
+    // checks if the given point has collided with the given edge
+    bool CheckCollision (Vector2 point, Edge edge) {
+        bool collided = false;
+        return collided; // collided true
+    }
+    
+    // check for collision between the points of the first polygon and the edges of the second polygon
+    bool CheckCollisionBetweenPolygonEdgesAndPoints (Polygon pointPoly, Polygon edgePoly) {
+        bool collided = false;
+        return collided;
+    }
+};
+
+
+
+
+
+
+#endif
+
+
+
 
 class Simulation {
 public:
-    Simulation (Vehicle *vehicle) {
+    Simulation (Vehicle *vehicle, bool tempIsSubSimulation) {
         veh = vehicle;
-        timeSinceUpdate = TimeNow ();
+        
+        // setup and initialize setting variables
+        SetupSettings ();
+        // setup layermasks for raycasts and physics stuff
+        SetUpPhysics ();
+        
+        // collisionEnabled = false;
+        // bumpsEnabled = false;
+        isSubSimulation = tempIsSubSimulation;
+        
+        // timeSinceUpdate = TimeNow ();
+        timeSinceUpdate = 0;
     }
     Simulation () {
-
+        
     }
     Vehicle *veh;
-
+    
+    // set up all of the physics stuff
+    void SetUpPhysics () {
+#if SIMULATED_COLLISION_ENABLED
+        // set up layer masks (for bump switches)
+        
+        courseObjects = CourseObjects ();
+        
+        int edgeCount = courseObjects.edgeCount;
+        int boxCount = courseObjects.boxCount;
+        int invertedBoxCount = courseObjects.invertedBoxCount;
+        
+        Box invertedBoxes [LayerMask::MAX_INVERTED_BOXES];
+        Box boxes [LayerMask::MAX_BOXES];
+        Edge edges [LayerMask::MAX_EDGES];
+        
+        for (int k = 0; k < edgeCount; k++) {
+            edges [k] = courseObjects.edges [k];
+        }
+        for (int k = 0; k < boxCount; k++) {
+            boxes [k] = courseObjects.boxes [k];
+        }
+        for (int k = 0; k < invertedBoxCount; k++) {
+            invertedBoxes [k] = courseObjects.invertedBoxes [k];
+        }
+        
+        // edgeCount = 0; // temporary
+#if SIMULATED_BUMPS_ENABLED
+        bumpLM = LayerMask ();
+#else
+        LayerMask bumpLM = LayerMask ();
+#endif
+        bumpLM.SetEdges (edges, edgeCount);
+        bumpLM.SetBoxes (boxes, boxCount);
+        bumpLM.SetInvertedBoxes (invertedBoxes, invertedBoxCount);
+        
+        // setup physics system
+        physicsLM = LayerMask::ConvertToPolygonMask (bumpLM);
+        float physObjMass = 1.0;
+        PhysicsObject physObj = PhysicsObject (veh->chassis, veh->pos, veh->vel, veh->angVel, physObjMass);
+        physics = PhysicsCalculator (physicsLM, physObj);
+#endif
+    }
     void Update () {
         float deltaTime = TimeNow () - timeSinceUpdate; // the elapsed amount of time in sseconds
+        timeSinceUpdate = TimeNow ();
 
-        Vector2 netForce = Vector2 (0, 0);
-        float netTorque = 0;
-        Vector2 netWheelPercentPower = Vector2 (0, 0);
-
-        for (int k = 0; k < veh->wheelsLength; k++) {
-            float motorPowerPercent = veh->wheels [k].activePercent;
-            float wheelRadius = veh->wheels [k].radius;
-            Vector2 wheelDirection = veh->wheels [k].dir;
-            netWheelPercentPower = Vector2 (netWheelPercentPower.x + wheelDirection.x * motorPowerPercent, netWheelPercentPower.y + wheelDirection.y * motorPowerPercent); // for clamping magnitude later
-
-            // I found how to do this bit at https://www.precisionmicrodrives.com/content/reading-the-motor-constants-from-typical-performance-characteristics/
-            // it seems sketchy to me
-            float SPEED_CONSTANT = NO_LOAD_SPEED / VOLTS; // angular speed per volt
-            float wheelAngularVelocity = (VOLTS) * SPEED_CONSTANT; // if I could substitute this bit for an equation of the wheel's angular velocity over power percent that would be good methinks
-            float power = VOLTS * CURRENT * motorPowerPercent;
-            float motorTorque = power / wheelAngularVelocity;
-            /*
-            float motorTorque = ((NO_LOAD_SPEED * motorPowerPercent) * TORQUE_PER_RPS + STALL_TORQUE) - STALL_TORQUE; // sketch
-            cout << "motorTorque " << motorTorque << endl;
-            */
-
-            float tractionForce = motorTorque * wheelRadius; // acording to omnidrive.pdf, tractionForce = wheelRadius * motor torque; seems sketchy to me
-            float frictionForce = STAT_FRICT_FORCE;
-            // frictionForce = 0; // comment out to enable friction
-            float wheelForceMagnitude = ApplyFrictionalForce (tractionForce, frictionForce);
-            Vector2 wheelForce = Vector2 (wheelDirection.x * wheelForceMagnitude, wheelDirection.y * wheelForceMagnitude);
-            /*
-            Vector2 tractionForce = Vector2 (wheelDirection.x * motorTorque * wheelRadius, wheelDirection.y * motorTorque * wheelRadius); // acording to omnidrive.pdf, tractionForce = wheelRadius * motor torque; seems sketchy to me
-            Vector2 frictionForce = Vector2 (wheelDirection.x * STAT_FRICT_FORCE, wheelDirection.y * STAT_FRICT_FORCE);
-            Vector2 wheelForce = Vector2 (ApplyFrictionalForce (tractionForce.x, frictionForce.x), ApplyFrictionalForce (tractionForce.y, frictionForce.y));
-            */
-            // Vector2 wheelForce = tractionForce;
-            netForce = Vector2 (netForce.x + wheelForce.x, netForce.y + wheelForce.y);
-
-            /*
-            Vector2 rPos = veh->wheels [k].pos; // the position in which the torque is applied (r)
-            float torque = rPos.x * wheelForce.y  -  rPos.y * wheelForce.x;
-            netTorque = netTorque + torque;
-            */
-            float torque = veh->radius * (wheelForceMagnitude); // may not be exactly right because the wheels aren't really centered on (center of mass of) the vehicle
-            netTorque = netTorque + torque;
-
-            veh->wheels [k].lastForceApplied = wheelForce;
-            // veh->wheels [k].lastForceApplied = Vector2 (-wheelForce.x, -wheelForce.y); // account for the direction of the motors being wrong
-        }
-
-        // (temporary) skip calculations and hardcode stuff; both of the below quantities are reasonable and the stuff calculated above should generally be similar to them
-        // netForce = Vector2 (.08, .08);
-        // netTorque = 10;
-
-        float MAGIC_ANG_ACCEL_NUMBER = 10.0; // a fudged number to make the torque in the simulation more closely resemble reality
-        Vector2 netAccel = Vector2 (netForce.x / MASS, netForce.y / MASS);
-        float angularAccel = -netTorque / MoI * MAGIC_ANG_ACCEL_NUMBER;
-
-        // convert back into correct units
-        angularAccel = angularAccel * RADS_TO_DEGREES * deltaTime * deltaTime; // rad/s/s --> degrees/frame/frame
-        netAccel = Vector2 (netAccel.x * METERS_TO_INCHES * deltaTime * deltaTime, netAccel.y * METERS_TO_INCHES * deltaTime * deltaTime); // m/s/s to inches/frame/frame
-
-        // account for the direction of the motors being wrong
-        /*
-        angularAccel *= -1;
-        netAccel = Vector2 (-netAccel.x, -netAccel.y);
-        */
-
-        veh->lastForceApplied = netForce;
-        // veh->lastForceApplied = Vector2 (-netForce.x, -netForce.y); // account for the direction of the motors being wrong
-
-        veh->ApplyAcceleration (netAccel);
-        veh->ApplyAngularAcceleration (angularAccel);
+        Vector2 netVelocity;
+        float netAngularVelocity = 0;
         
-        // clamp the magnitudes of the vehicles velocity and angular velocity (this currently makes acceleration irrelevent; will fix in the future)
-        float percentWheelPowerUsed = netWheelPercentPower.getMagnitude (); // may have to seperate the amount rotation contributes to this... idk
-        float maxVelocity = 0.02; // guess and check
-        veh->vel.ClampMagnitude (percentWheelPowerUsed * maxVelocity);
-        // cout << percentWheelPowerUsed << endl;
-        // cout << "vel: " << veh->vel.x << ", " << veh->vel.y << endl;
-        float maxAngularVelocity = 10;
-        //veh->angVel = (veh->angVel / abs (veh->angVel)) * maxAngularVelocity;
-
+        // add up velocities of all the wheels (powerPercents * wheel direction * max velocity)
+        // add up the angular velocities caused by all the wheels (calculated similar to torque)
+        for (int k = 0; k < veh->wheelsLength; k++) {
+            float percentMotorPower = veh->wheels [k].activePercent;
+            float wheelVelocityMagnitude = percentMotorPower * MAX_VELOCITY * deltaTime;
+            // float wheelAngularVelocityMagnitude = percentMotorPower * MAX_ANGULAR_VELOCITY * deltaTime;
+            float MAGIC_VEL_NUMBER = 1 / 1.66;
+            
+            Vector2 wheelDirection = veh->wheels [k].dir.getUnitVector();
+            Vector2 wheelVelocity = Vector2 (wheelDirection.x * wheelVelocityMagnitude * MAGIC_VEL_NUMBER, wheelDirection.y * wheelVelocityMagnitude * MAGIC_VEL_NUMBER);
+            netVelocity = Vector2 (netVelocity.x + wheelVelocity.x, netVelocity.y + wheelVelocity.y);
+            
+            float MAGIC_ANG_ACCEL_NUMBER = 1.43; // 1.66 = old, 1.43 = new
+            float angularVelocity = -veh->radius * wheelVelocityMagnitude * MAGIC_ANG_ACCEL_NUMBER; // hmmm
+            netAngularVelocity += angularVelocity;
+            veh->wheels [k].lastForceApplied = wheelVelocity;
+        }
+        
+        veh->lastForceApplied = netVelocity;
+        // use accelerateTo function to accelerate to the target velocity
+        // do similarly with angular velocity
+        float gain = 1.0;
+        AccelerateTo (netVelocity, gain);
+        AngularAccelerateTo (netAngularVelocity, gain);
+        
+        if (SIMULATED_COLLISION_ENABLED && collisionEnabled) {
+            physics.UpdatePhysicsObjectVars (veh->chassis, veh->pos, veh->vel, veh->angVel);
+            physics.CalculateCollisions ();
+            Vector2 collisionForce = physics.force;
+            float collisionTorque = physics.torque;
+            veh->ApplyAcceleration (collisionForce);
+            veh->ApplyAngularAcceleration (collisionTorque);
+        }
+        
+        if (SIMULATED_BUMPS_ENABLED && bumpsEnabled) {
+            // get bump switch value
+            for (int k = 0; k < veh->bumpsLength; k++) {
+                veh->bumps [k].SetValue (SimulateBumpValue (&veh->bumps [k]));
+            }
+        }
+        
         veh->UpdatePosition ();
         veh->UpdateRotation ();
-
-        timeSinceUpdate = TimeNow ();
+    }
+    
+#if SIMULATED_BUMPS_ENABLED
+    bool SimulateBumpValue (BumpSwitch *bump) {
+        // perform ray casts
+        Vector2 origin = Vector2 (veh->pos.x + bump->pos.x, veh->pos.y + bump->pos.y); // 72 is course height
+        bump->startPos = origin;
+        Vector2 direction = bump->dir;
+        float maxDistance = 0.0001; // 1.0
+        int uselessTypeID = 'a';
+        Raycast raycast = Raycast (bumpLM, origin, direction, maxDistance, uselessTypeID);
+        // set bump endpoint position to where the raycast ended
+        bump->endPos = raycast.point;
+        
+        // return raycast value
+        return !(raycast.hit);
+    }
+#else
+    bool SimulateBumpValue (BumpSwitch *bump) {
+        return false;
+    }
+#endif
+    
+    
+    /************************ MISC FUNCTIONS ************************/
+    
+    void AccelerateTo (Vector2 targetVelocity, float gain) {
+        Vector2 accel = Vector2 (targetVelocity.x - veh->vel.x, targetVelocity.y - veh->vel.y);
+        veh->ApplyAcceleration (accel);
+    }
+    void AngularAccelerateTo (float targetVelocity, float gain) {
+        float angAccel = targetVelocity - veh->angVel;
+        veh->ApplyAngularAcceleration (angAccel);
     }
     float ApplyFrictionalForce (float force, float friction) {
         if (force > 0) {
@@ -213,53 +894,83 @@ public:
         }
         return force;
     }
+    float SignOf (float num) {
+        int result = 1;
+        if (num < 0) {
+            result = -1;
+        }
+        return result;
+    }
+    
+    /*********************** SETTINGS FUNCTIONS *************************/
+    
+    // initialize setting variables
+    void SetupSettings () {
+        collisionEnabled = true;
+        bumpsEnabled = true;
+    }
+    // set whether the simulated vehicle should collide or not
+    void SetCollision (bool isEnabled) {
+        collisionEnabled = isEnabled;
+    }
+    // set whether the simulated vehicle should have simulated bumpswitches
+    void SetSimulatedBumps (bool isEnabled) {
+        bumpsEnabled = isEnabled;
+    }
+    
+    
+    // misc variables
+    
     float timeSinceUpdate; // the time passed since the simulated vehicle was updated
+    
+    
+    // physics variables
+    
+    CourseObjects courseObjects;
+#if SIMULATED_BUMPS_ENABLED
+    LayerMask bumpLM; // the layer mask for the bump switches
+#endif
+    LayerMask physicsLM; // the layer mask for physics collisions
+    PhysicsCalculator physics;
+    
+    
+    // setting variables
+    
+    bool collisionEnabled;
+    bool bumpsEnabled;
+    bool isSubSimulation;
 
+    
     // constant variables initialization
 
+#if IS_SIMULATION
     constexpr static float A_GRAVITY = 9.81;
     constexpr static float SQRT_3 = 1.73205080757;
     constexpr static float RADS_TO_DEGREES = M_PI / 180.0;
     constexpr static float METERS_TO_INCHES = 39.3701;
     constexpr static float INCHES_TO_METERS = 1.0 / METERS_TO_INCHES;
+    
+    constexpr static float VELOCITY_AT_50_POWER = 8.9; // in inches per second
+    constexpr static float MAX_VELOCITY = VELOCITY_AT_50_POWER * 2.0; // in inches per second
+    constexpr static float ANGULAR_VELOCITY_AT_50_POWER = 135.0; // in degrees per second
+    constexpr static float MAX_ANGULAR_VELOCITY = ANGULAR_VELOCITY_AT_50_POWER * 2.0; // in degrees per second
+#else
+    const static float A_GRAVITY = 9.81;
+    const static float SQRT_3 = 1.73205080757;
+    const static float RADS_TO_DEGREES = M_PI / 180.0;
+    const static float METERS_TO_INCHES = 39.3701;
+    const static float INCHES_TO_METERS = 1.0 / 39.3701;
 
-    constexpr static float WHEEL_RADIUS = 1.2 * INCHES_TO_METERS; // veh->wheels[k].radius
-    constexpr static float HEX_RADIUS = ((2.0*SQRT_3 + 1.5*SQRT_3) / 2.0) * INCHES_TO_METERS; // veh->radius
-
-    constexpr static float RPM_TO_RPS = 2.0 * M_PI / 60.0; // RPM to radians per second
-    constexpr static float OZIN_TO_NM = 0.0070615518333333; // ounce-inches to newton-meters
-
-    constexpr static float NO_LOAD_SPEED = 112.0 * RPM_TO_RPS; // in radians per second
-    constexpr static float STALL_TORQUE = 123.53 * OZIN_TO_NM; // in newton-meters
-    constexpr static float TORQUE_PER_RPS = -1.0111 * OZIN_TO_NM / RPM_TO_RPS; // y = -1.011x + 123.53
-    constexpr static float RPS_PER_TORQUE = 1.0 / TORQUE_PER_RPS;
-
-    constexpr static float MASS = 1487.9 / 1000.0; // in kilograms; should probably get a more accurate measurement of this in the future
-    constexpr static float WHEEL_MASS = (115.33) / 3000.0; // in kilograms; should probably get a more accurate measurement of this in the future
-    constexpr static float MoI = 0.5 * MASS * HEX_RADIUS * HEX_RADIUS; // moment of intertia; should get this from SolidWorks in the future
-    constexpr static float WHEEL_MoI = 0.5 * WHEEL_MASS * WHEEL_RADIUS * WHEEL_RADIUS; // wheel moment of intertia; should get this from SolidWorks in the future; this might be different due to wheel rotation w/ no slip
-
-    constexpr static float STAT_FRICT_COEF = 0.1; // the static friction coefficient; this is currentrly arbatrary; I should probably get a better value
-    constexpr static float NORMAL_FORCE = (MASS / 3.0) * A_GRAVITY; // the normal force on each wheel
-    constexpr static float STAT_FRICT_FORCE = NORMAL_FORCE * STAT_FRICT_COEF; // the force applied to the bottom of the wheel due to static friction
-    constexpr static float WHEEL_TORQUE_FRICT = STAT_FRICT_FORCE * WHEEL_RADIUS; // the torque applied to each wheel due to friction
-
-    constexpr static float CURRENT = 3.6 * 0.5; // I don't know what this value actually is; 3.6 --> stall; 1.15 --> free
-    constexpr static float VOLTS = 9.0;
-    constexpr static float MAX_POWER = CURRENT * VOLTS; // I don't know what this value actually is
-    constexpr static float WHEEL_ANGULAR_SPEED_AT_50_POWER = 5.0; // I don't know what this value actually is; measure this
-    constexpr static float MAX_WHEEL_ANGULAR_SPEED = WHEEL_ANGULAR_SPEED_AT_50_POWER * 2.0;
-    // constexpr static float motorTorque = (MAX_POWER * motorPowerPercent) / MAX_WHEEL_ANGULAR_SPEED;
-
-    // constexpr static float wheelNetTorque = motorTorque - WHEEL_TORQUE_FRICT;
-    // constexpr static float wheelRotAccel = wheelNetTorque / WHEEL_MoI; // the angular acceleration of the wheel
-    // constexpr static float WHEEL_ROT_VEL = WHEEL_ROT_ACCEL * deltaTime;
-    // constexpr static float WHEEL_ROT_DISPLACEMENT = WHEEL_ROT_ACCEL * deltaTime * deltaTime;
+    const static float VELOCITY_AT_50_POWER = 8.9; // in inches per second
+    const static float MAX_VELOCITY = 8.9 * 2.0; // in inches per second
+    const static float ANGULAR_VELOCITY_AT_50_POWER = 135.0; // in degrees per second
+    const static float MAX_ANGULAR_VELOCITY = 135.0 * 2.0; // in degrees per second
+#endif
 private:
 };
 
 
 
 
-
+#endif /* Simulation_hpp */
 #endif
