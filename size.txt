@@ -1,2 +1,0 @@
-   text	   data	    bss	    dec	    hex	filename
- 102964	   3448	  14380	 120792	  1d7d8	../RobotDesignProject.elf
